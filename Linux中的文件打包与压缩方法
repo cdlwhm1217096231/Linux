@@ -1,0 +1,71 @@
+一、文件打包和解压缩
+	在windows系统上最常见的压缩文件不外乎这三种*.zip,*.rar,*.7z后缀的压缩文件，而在Linux系统上常见常用的除了以上的3种之外，还有*.gz,*.xz,*.bz2,*.tar,*tar.gz,*tar.xz,*.tar.bz2等后缀的压缩文件。
+	1. .zip压缩打包程序
+		1.1 打包文件夹
+			zip -r -q -o njust.zip /home/cdl
+		参数说明:
+			-r：表示递归打包包含子目录的全部内容
+			-q：表示为安静模式，即不向屏幕输出信息
+			-o：表示输出文件，需要在其后紧跟打包输出文件名
+		查看压缩文件的信息：
+			du -h njust.zip
+			file njust.zip
+		1.2 设置压缩等级(9最小,1最大)
+			zip -r 9 -q -o njust_9.zip /home/cdl -x ~/*.zip
+			zip -r -1 -q -o njust_1.zip /home/cdl -x ~/*.zip
+		这里添加了一个参数用于设置压缩级别[1-9],1表示最快压缩但体积大，9表示体积最小但耗时最久。最后那个-x是为了排除上一次创建的zip文件，否则又会被打包进这一次的压缩文件中。这里只能使用绝对路径！！！
+		再使用du命令分别查看默认压缩等级、最低和最高压缩级别及未压缩的文件的大小：
+			du -h -d 0 *.zip | sort
+		通过man手册可知：
+			h：输入人类可以解释的信息
+			d：所查看文件的深度
+		1.3 创建加密zip包(使用-e参数可以创建加密压缩包)
+			zip -r -e -o njust_encryption.zip /home/cdl
+		注意：关于zip命令，因为windows系统与Linux在文本文件格式上的兼容问题，比如换行符(为不可见字符)，在windows为回车加换行，Linux上为换行；所以如果不加处理的话，在Linux上编辑的文本文件，在windows系统上打开可能看起来是没有换行的。如果想让在Linux创建的zip压缩文件在Windows系统上解压后没有任何问题，那么还需要对命令进行修改：
+			zip -r -l -o njust.zip /home/cdl   需要加上-l参数将换行转为回车加换行
+	2. 使用unzip命令解压缩zip文件
+		将njust.zip解压到当前目录下：
+			unzip njust.zip
+		使用安静模式，将文件解压到指定目录，指定目录不存在，会自动创建：
+			unzip -q njust.zip -d ziptest
+		如果不想解压只想查看压缩包的内容，可以使用-l参数：
+			unzip -l njust.zip
+		注意：使用unzip解压文件时同样应该注意兼容问题，不过这里此时关心的不再是上面的问题，而是中文编码的问题。通常windows系统上创建的压缩文件，如果有包含中文的文档或以中文作为文件名的文件时，默认会采用GBK或其他编码，而Linux上默认使用utf-8编码，如果不加任何处理，直接解压的话可能会出现中文乱码的问题(有时候它会帮你自动处理)。为了解决这个问题，可以在解压时指定编码类型。
+		使用-O(大写的字母O)参数指定编码类型：
+			unzip -O GBK 中文压缩文件.zip
+	3. .rar文件打包压缩命令
+		rar也是windows上常用的一种压缩文件的格式，在Linux上可以使用rar和unrar工具分别创建和解压rar压缩包
+		首先使用需要安装rar和unrar工具：
+			sudo apt-get update
+			sudo apt-get install rar unrar
+		在使用rar、unrar命令时，应该注意命令参数前不加-，否则会报错！
+			rm *.zip
+			rar a njust.rar
+		上面的命令使用a参数添加一个目录~到一个归档文件中，如果该文件不存在就会自动创建。
+		如果不解压只是查看文件，可以使用参数l：
+			rar l njust.rar
+		全路径解压：
+			unrar x njust.rar
+		去掉全路径解压：
+			mkdir temp
+			unrar e njust.rar temp/
+	4. .tar打包工具
+		在Linux上面更常用的是tar工具，tar原本只是一个打包工具，只是同时还实现了对7z，gizp，xz，bzip2等工具的支持
+		创建一个tar包：
+			tar -cf njust.tar ~   (此命令会自动去掉表示绝对路径的/，也可以使用-P保留绝对路径符)
+		参数说明：
+			-c：创建一个tar包文件
+			-f：指定创建文件的名，注意文件名必须紧跟在-f参数后，不能写成tar -fc njust.tar!可以写成tar -f njust.tar -c ~
+			-v：以可视的方式输出打包的文件
+		解压一个文件(-x参数)到指定路径的已存在目录(-C参数)：
+			mkdir tardir
+			tar -xf njust.tar -C tardir
+		只查看不解压文件-t参数：
+			tar -tf njust.tar
+		对于创建不同压缩格式的文件时，对于tar来说是非常简单，需要的只是换一个参数，这里以使用gzip工具创建.tar.gz文件为例来说明。只需要在创建tar文件的基础上加一个-z参数，使用gzip来压缩文件：tar -czf njust.tar.gz ~
+		解压*.tar.gz文件到当前文件夹：
+			tar -xzf njust.tar.gz
+		现在要使用其他的压缩工具创建或解压相应文件时，只需要更改一个参数即可：
+
+		此外，还有gzip和gunzip(相当于gzip -d)：压缩和解压命令，解压文件为.gz后缀
+
