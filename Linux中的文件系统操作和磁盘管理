@@ -1,0 +1,58 @@
+### 一、简单文件系统操作
+	- 1. 查看磁盘和目录的容量
+		- 使用df命令查看磁盘的容量，加上-h参数，以更易读的方式展开：
+			df -h
+		- 使用du命令查看目录的容量，-d参数指定查看目录的深度：
+			du -h -d 0 ~  # 只查看1级目录的信息
+### 二、简单的磁盘管理
+	- 1. 创建虚拟磁盘
+		- dd命令简介
+			- dd命令用于转换和复制文件，不过它不同于cp。在Linux系统中，一切即文件。硬件的设备驱动(如硬盘)和特殊设备文件(如/dev/zero和/dev/random)都像普通文件一样，只要在各自的驱动程序中实现了对应的功能，dd也可以读取或写入这些文件。这样，dd也可以用在备份硬件的引导扇区、获取一定数量的随机数据或空数据等任务中。dd程序也可以在复制时处理数据，例如转换字节序，或在ASCII和EBCDIC编码间互换。
+			- dd的命令行语句与其他的Linux程序不同。因为它的命令行选项格式为选项=值，而不是更标准的--选项 值或 - 选项=值。dd默认从标准输入中读取，并写到标准输出中，但可以用选项if(input file,输入文件)和of(output file，输出文件)来改变。
+			- dd of = test bs=10 count=1 或 dd if = /dev/stdin of=test bs=10 count=1 前面的命令从标准输入设备读入用户输入(缺省值，所以可以省略),然后输出到test文件，bs(block size)用于指定块的大小(缺省单位为byte，也可以为其指定如K,M,G等单位)，count用于指定块的数量。接着从标准输入中写入：hello，cdl！指定只读取总共10个字节的数据，当我们输入"hello,cdl!"之后，总共就会有13个字节(一个英文字符占一个字节)内容，显然超过了设定的大小。du -b test   cat test  使用du和cat命令看到的写入完成文件实际内容确实只有10个字节，而其他的多余输入将被截取并保留在标准输入。
+			- dd在拷贝的同时还可以实现数据转换，如将输出的英文字符转换为大写，再写入到文件
+				dd if=/dev/stdin of=test bs=10 count=1 conv=ucase
+	- 2. 使用dd命令创建虚拟镜像文件
+		dd if=/dev/zero of=virtual.img bs=1M count=256
+		du -h virtual.img
+	- 3. 使用mkfs命令来格式化磁盘
+		sudo mkfs.ext4 virtual.img    (将创建的虚拟磁盘镜像格式化为ext4文件系统)
+	- 4. 使用mount命令挂载磁盘到目录树
+		- 用户在Linux/UNIX的机器上打开一个文件之前，包含该文件的文件系统必须先进行挂载的动作，此时用户要对该文件执行mount的指令以进行挂载。通常是使用在USB或其他可移除存储设备上，而根目录则需要始终保持挂载的状态。
+		- 使用mount来查看主机已经挂载的文件系统
+			sudo mount
+		- mount命令的一般格式如下：
+			mount  [options]  [source]  [directory]
+		- 一些常用操作：
+			mount -o loop --ro virtual.img /mnt 或 mount -o loop,ro virtual.img /mnt
+		- 使用umount命令可以卸载已挂载磁盘：
+			sudo umount /mnt
+	- 5. 使用fdisk进行磁盘分区
+		- 查看硬盘分区表信息
+			sudo fdisk -l
+		- 进入磁盘分区模式
+			sudo fdisk virtual.img
+		- 然后根据自己规划号的分区方案，利用提示信息分区，比如使用128M的虚拟磁盘镜像创建一个30M的主分区，剩余部分为扩展分区，包含2个大约45M的逻辑分区。操作完成后，输入p查看结果，完成后输入w，写入分区表。
+	- 6. 使用losetup命令建立镜像与回环设备的关联
+		sudo loseup /dev/loop0 virtual.img
+		- 如果提示设备忙，也可以使用其他的回环设备，"ls /dev/loop*"参看所有回环设备
+		- 解除设备关联：
+			sudo loseup -d /dev/loop0
+	- 7. 使用mkfs格式化分区
+		- 前面是格式化整个虚拟磁盘镜像文件或磁盘，不过格式化之前，还要为各个分区建立虚拟设备的映射，用到kpartx工具，需要先安装。
+			sudo apt-get install kpartx
+			sudo kpartx -av /dev/loop0
+		- 取消映射
+			sudo kpartx -dv /dev/loop0
+		- 接着再进行格式化，将其全部格式化为ext4
+			sudo mkfs.ext4 -q /dev/mapper/loop0p1
+			sudo mkfs.ext4 -q /dev/mapper/loop0p5
+			sudo mkfs.ext4 -q /dev/mapper/loop0p6
+		- 格式化完成后，在/media目录下新建三个空目录用于挂载虚拟磁盘
+			mkdir -p /media/virtualdisk_{1..3}
+	- 8. 挂载磁盘分区
+		sudo mount /dev/mapper/loop0p1 /media/virtualdisk_1
+		sudo mount /dev/mapper/loop0p1 /media/virtualdisk_2
+		sudo mount /dev/mapper/loop0p1 /media/virtualdisk_3
+	- 整个过程完成后，使用df -h,能够找到上面创建的磁盘分区
+
