@@ -1,0 +1,34 @@
+一、用户
+1.查看用户：who am I
+2.创建用户：sudo adduser <用户名>
+	在linux中，root权限拥有至高无上的权利，一般登录系统时都是以普通账户的身份登录的，要创建用户需要root权限，这里就需要用到sudo这个命令。不过使用这个命令有两个前提，一是知道当前登录用户的密码，二是当前用户必须在sudo用户组。
+如， sudo adduser curry
+3.切换用户：sudo su <user> 或sudo su -l <user>切换用户，环境变量也变成对应的用户的环境变量
+	如切换到root用户：sudo su或sudo root或sudo su -
+su命令和su -命令的区别是：su只切换了root身份，但shell环境仍然是普通用户的shell；而su -连用户和shell环境一起切换到root身份了。只有切换了合适的shell环境才不会出现PATH环境变量错误，报command not found错误
+4.退出用户：与退出终端的操作相同，exit或Ctrl + d
+5.用户组
+	在linux中每个用户都有一个归属，用户组简单解释是一组用户的集合，它们共享一些资源和权限，同时拥有私有资源，一个用户是可以属于多个用户组。
+	查看所属用户组：groups <user> 
+	cat /etc/group | sort 查看所有用户组信息
+	cat /etc/group | grep "user" 查找具体用户信息
+	etc/group文件格式说明：
+		etc/group的内容包括用户组group,用户组口令，GID及该用户组所包含的用户user,每个用户组一条记录
+		格式：group_name:password:GID:user_list
+		有时候输出的password字段是一个'X'并不是说密码就是它，而是表示密码不可见
+6.将其他用户加入sudo用户组
+	默认情况下新创建的用户是不具有root权限，也不在sudo用户组，可以让其加入sudo用户组，从而获取root权限。使用usermod命令可以为用户添加用户组，同样使用该命令必须有root权限。可以直接使用root用户为其他用户添加用户组；或者用其他已经在sudo用户组的用户使用sudo命令获取权限来执行该命令。
+	如，这里使用cdl用户执行sudo命令将curry添加到sudo用户组，让它可以使用sudo命令，获取root权限。sudo usermod -G sudo curry
+7.删除用户
+	sudo deluser curry --remove-home
+二、文件权限管理
+	1.列出详细信息包括如下：
+	
+	2.文件类型和权限具体内容如下：
+	
+	3.更改文件所有者
+		sudo chown <用户名> <文件名>
+	4.修改文件权限 chmod命令
+		(1). 二进制数字表示  chmod 700 <文件名>
+		(2). 加减赋值操作 chmod go-rw <文件名>  'g'、'o'、'u'分别表示group、other、user，'+'、'-'就分别表示增加和去除相应的权限，上面的命令使得group和others不能进行读写操作。
+
