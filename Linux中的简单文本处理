@@ -1,0 +1,41 @@
+### 文本处理命令
+	- 1. tr命令(可以用来删除一段文本信息中的某些文字，或者将其进行转换)
+		- 格式： tr [option] ... SET1 [SET2]
+		- 可选参数：
+			- -d: 删除和set1匹配的字符
+			- -s：去除set1指定的在输入文本中连续并重复的字符
+		- 如，删除"hello curry"中所有的'o', 'l', 'h'：echo "hello curry" | tr -d 'olh'
+		- 如，将"hello"中的ll，去重为一个l：echo "hello" | tr -s 'l'
+		- 如，将输入文本，全部转换为大写或小写输出：cat /etc/passwd | tr '[:lower:]'  '[:upper:]'
+			- 注：上面的'[:lower:]'  '[:upper:]'有时候也可以简单写为'[a-z]'  '[A-Z]'
+		- Linux中的特殊符号说明见下表
+
+	- 2. col命令(可以将Tab换成对等数量的空格键，或者反转这个操作)
+		- 格式： col [option]
+		- 可选参数：
+			- -x: 将Tab键转为空格
+			- -h：将空格转为Tab键(默认选项)
+		- 如，查看/etc/protocols中的不可见字符，可以看到很大^I,其实这就是Tab转义成可见字符的符号
+			cat -A /etc/protocols
+		- 如，使用col -x将/etc/protocols中的Tab转换为空格，然后再使用cat查看，可以发现^I不见了
+			cat /etc/protocols | col -x | cat -A
+	- 3. join命令(用于将两个文件中包含相同内容的那一行合并在一起)
+		- 格式：join [option] .. file1 file2
+		- 可选参数：
+			- -t:指定分隔符，默认为空格
+			- -i：忽略大小写的差异
+			- -1：指明第一个文件要用哪个字段来对比，默认对比第一个字段
+			- -2：指明第二个文件要用哪个字段来对比，默认对比第一个字段
+		- 如，将/etc/passwd与/etc/group两个文件进行合并，指定以':'作为分隔符，分别对比第4个和第3个字段
+			sudo join -t ':' -1 4 /etc/passwd -2 3 /etc/group
+	- 4. paste命令(与join命令类似，它是在不对比数据的情况下，简单地将多个文件合并在一起，以Tab键分隔开)	
+		- 格式：paste [option] file ...
+		- 可选参数：
+			- -d：指定合并的分隔符，默认为Tab
+			- -s：不合并到一行，每个文件为一行
+		- 例如下面的例子：
+			echo hello > file1
+			echo cdl > file2
+			paste -d ':' file1 file2
+			paste -s file1 file2
+
