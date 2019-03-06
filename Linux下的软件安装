@@ -1,0 +1,58 @@
+### 一、Linux下的软件安装方式
+	- 通常Linux上的软件安装主要有三种方式：
+		- 在线安装
+		- 从磁盘安装deb软件包
+		- 从二进制软件包安装
+### 二、在线安装
+	- 在不同的linux发行版上面在线安装方式会有一些差异，包括使用的命令及它们的包管理工具，因为我们的开发环境是基于ubuntu系统的，所以这里的在线安装方式只适用于ubuntu发行版，或者其他基于ubuntu的发行版，如国内的ubuntukylin,ubuntu又是基于debian的发行版，它使用的是debian的包管理工具dpkg，所以一些操作也适用于debian。而在其他一些采用其它包管理工具的发行版，如redhat、centos、fedora等将不适用(redhat和centos使用rpm)。例如安装一个w3m(一个命令行的简易网页浏览器),输入下列的命令：
+		sudo apt-get install w3m
+	- 1. apt包管理工具
+		- APT是Advanced Package Tool(高级包装工具)的缩写，是Debian及其派生发行版的软件包管理器，APT可以自动下载、配置、安装二进制或源代码格式的软件包，因此简化了Unix系统上管理软件的过程。
+		- 当在执行安装操作时，首先apt-get工具会在本地的一个数据库中搜索关于w3m软件的相关信息，并根据这些信息在相关的服务器上下载软件安装，但既然是在线安装软件，为何会在本地的数据库中搜索？
+		- 我们需要定期从服务器上下载一个软件包列表，使用sudo apt-get update命令来保持本地的软件包列表是最新的，而这个表里会有软件依赖信息的记录。对于软件依赖，比如在安装w3m软件的时候，这个软件需要libgc1c2这个软件包才能正常工作，这时候apt-get在线安装软件的时候会一并替我们安装了，以保证w3m能正常的工作。
+	- 2. apt-get
+		- apt-get使用各个用于处理apt包的公用程序集，可以用它来在线安装、卸载和升级软件包等，下面列出了一些apt-get包含的常用的一些工具。
+
+		- 下面是一些apt-get常用的参数：
+
+	- 3. 安装软件包
+		- 关于软件包的安装，如前面的演示那样只需要执行apt-get install <软件包名>即可，除了这一点外，还应该掌握的是如何重新安装软件包。很多时候我们需要重新安装一个软件包，比如系统被破坏，或者一些错误的配置导致软件无法正常工作。可使用如下的安装方式重新安装:
+			sudo apt-get --reinstall install w3m
+		- 另外，在不知道软件包完整名的使用使用Tab键补全软件包名或采用后边搜索的方法进行安装。有时候需要同时安装多个软件包，还可以使用正则表达式匹配软件包名进行批量安装。
+	- 4. 软件升级
+		- sudo apt-get update   更新软件源
+		- sudo apt-get upgrade  升级没有依赖问题的软件包
+		- sudo apt-get dist-upgrade  升级并解决依赖关系
+	- 5. 卸载软件
+		- 如果现在需要卸载w3m，同样只需要一个命令加回车sudo apt-get remove w3m，系统会有一个确认的操作，之后这个软件便会被成功卸载了。根据不同的目的或可以执行:
+			- sudo apt-get purge w3m或sudo apt-get --purge remove  不保留配置文件的移除
+			- sudo apt-get autoremove    移除不再需要的被依赖的软件包
+	- 6. 软件搜索
+		- 当自己刚知道一个软件时，想下载使用，需要确认软件仓库里面有没有，就需要用到搜索功能了，命令如下：
+			sudo apt-cache search 软件包名1 软件包名2 .....
+		- apt-cache命令则是针对本地数据进行相关操作的工具，search意思就是在本地的数据库中寻找关于软件包1，软件包2...等的相关软件信息，如:
+			sudo apt-cache search w3m
+		 	sudo apt-cache search qq
+### 三、使用dpkg从本地磁盘安装deb软件包
+	- 1. dpkg介绍
+		- dpkg(Debian Package)是Debian软件包管理器的基础。dpkg与rpm十分相似，同样被用于安装、卸载、供给和.deb软件包相关的信息。经常可以在网络上见到以deb形式打包的软件包，dpkg常用参数介绍如下：
+		
+	- 2. 使用dpkg安装deb软件包
+		- 先使用apt-get加上-d参数只下载不安装，下载emacs编辑器的deb安装包：
+			sudo apt-get -d install emacs
+		- 下载完成后，可以查看/var/cache/apt/archives/目录下的内容：
+			ls /var/cache/apt/archives/
+		- 然后，将第一个deb拷贝到home目录下：
+			cp /var/cache/apt/archives/emacs24_24.3+1-4ubuntu1_amd64.deb ~
+		- 使用dpkg安装：
+			sudo dpkg -i emacs24_24.3+1-4ubuntu1_amd64.deb
+		- 安装失败，因为这个包还额外依赖了一些软件包，这意味着，如果主机目前没有这些被依赖的软件包，直接使用dpkg安装可能会存在一些问题，因为dpkg并不能解决依赖关系。使用apt-get的-f参数修复依赖关系的安装：
+			sudo apt-get -f install
+		- 没有任何错误，这样就安装成功了，然后可以运行emacs程序了：emacs
+	- 3. 查看已安装软件包的目录
+		- 可以通过dpkg查看linux将软件安装在什么位置，使用dpkg -L查看deb包目录信息：
+			sudo dpkg -L emacs24
+		- 查看电脑bios模式(Legacy或UEFI)
+			sudo dpkg -l | grep grub-efi
+
+
