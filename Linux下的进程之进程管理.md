@@ -75,7 +75,7 @@
         ![ps命令参数介绍.png](https://upload-images.jianshu.io/upload_images/13407176-348fce4a88bff0cd.png?imageMogr2/auto-orient/strip%7CimageView2/2/w/1240)
         - TPGID栏写着-1的都是没有控制终端的进程，也就是守护进程
         - STAT表示进程的状态，而进程的状态有很多，如下表所示：
-        ![STAT进程参数介绍.png](https://upload-images.jianshu.io/upload_images/13407176-ea3bfd8c7e5dafe8.png?imageMogr2/auto-orient/strip%7CimageView2/2/w/1240)
+    ![STAT进程参数介绍.png](https://upload-images.jianshu.io/upload_images/13407176-ea3bfd8c7e5dafe8.png?imageMogr2/auto-orient/strip%7CimageView2/2/w/1240)
             - D是不能被中断睡眠的状态，处在这种状态的进程不接受外来的任何 signal，所以无法使用 kill 命令杀掉处于D状态的进程，无论是 kill，kill -9 还是 kill -15，一般处于这种状态可能是进程 I/O 的时候出问题了。
     - ps 工具有许多的参数，使用-l参数可以显示自己这次登陆的bash相关的进程信息罗列出来。
      ![ps -l命令.png](https://upload-images.jianshu.io/upload_images/13407176-9595bd8ff24f049b.png?imageMogr2/auto-orient/strip%7CimageView2/2/w/1240)
