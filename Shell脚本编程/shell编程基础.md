@@ -130,8 +130,7 @@
 - 命令替换允许你将shell命令的输出赋值给变量，具体如下所示：
     ```
     #!/bin/bash
-
-
+    
     testing=`date`
     test=$(date)
     echo The date and time are: $testing
@@ -398,4 +397,5 @@
     44
     ```
 #### 9.资料下载
-- [笔记，欢迎star,follow,fork......](https://github.com/cdlwhm1217096231/Linux)
+- [笔记，欢迎star,follow,fork......](https://github.com/cdlwhm1217096231/Linux/tree/master/Shell%E8%84%9A%E6%9C%AC%E7%BC%96%E7%A8%8B)
+
