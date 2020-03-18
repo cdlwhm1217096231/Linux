@@ -874,5 +874,5 @@
     Welcome, njust
     Please enjoy your visit
     ```
-#### 9.资料下载
+#### 8.资料下载
 - [笔记，欢迎star,follow,fork......](https://github.com/cdlwhm1217096231/Linux/tree/master/Shell%E8%84%9A%E6%9C%AC%E7%BC%96%E7%A8%8B)
