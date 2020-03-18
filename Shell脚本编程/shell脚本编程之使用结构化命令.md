@@ -1,6 +1,7 @@
 ### 技术交流QQ群:1027579432，欢迎你的加入！
 ### 本教程使用Linux发行版Centos7.0系统，请您注意~
 - **结构化命令**：许多程序要求对shell脚本中的命令添加一些逻辑流程控制，有一类命令会根据条件使脚本跳过某些命令。这样的一类命令就称为结构化命令。
+
 #### 1.使用if-then语句
 - 最简单的结构化语句是if-then语句，其语法格式如下：
     ```
@@ -75,6 +76,7 @@
     -rw-r--r--. 1 njust njust  193 8月   8 2019 /home/njust/.bash_profile
     -rw-r--r--. 1 njust njust  231 8月   8 2019 /home/njust/.bashrc
     ```
+
 #### 2.if-then-else语句
 - if-then语句中，不管命令是否成功执行，都只有一种选择。如果if后面的命令返回一个非零退出状态码，bash shell就会继续执行脚本中的下一条命令。if-then-else语句就是解决返回非零退出状态码的情况。语法格式：
     ```
@@ -109,6 +111,7 @@
     The user njuster does not exist on this system.
 
     ```
+
 #### 3.嵌套if-then
 - 可以使用elif代替多个if-then语句。具体范例如下：
     ```
@@ -149,6 +152,7 @@
     fi
     ```
 - **尽管elif语句的代码看起来很清晰，但脚本的逻辑不好。后面会使用case命令代替if-then语句的大量嵌套**。
+
 #### 4.test命令
 - 目前为止，if语句中看到的都是普通的shell命令。由于if-then语句不能测试命令退出状态码之外的条件。因此，bash shell中有个工具可以帮你通过if-then语句测试其他条件。
 - test命令提供了在if-then语句中测试不同条件的路径。**如果test命令中列出的条件成立，test命令就会退出并返回退出状态码；如果条件不成立，test命令就会退出并返回非零的退出状态码**。于是，if-then语句就不会被执行。语法格式如下：
@@ -265,6 +269,7 @@
     The test value is 3.1415926.
     ./num2.sh: 第 7 行:[: -gt: 期待一元表达式
     ```
+
 ##### 4.2 字符串比较
 - 条件测试还允许比较字符串的值。测试两个字符串之间的比较语法如下：
     ```
@@ -417,6 +422,7 @@
     The string '' is empty.
     The string '' is empty.
     ```
+
 ##### 4.3 文件比较
 - 文件比较可能是shell编程中最强大、用的最多的比较形式。它允许你测试Linux文件系统上文件和目录的状态。文件比较功能语法如下：
     ```
@@ -494,3 +500,379 @@
     OK on the filename
     Updating Current Date...
     ```
+- **检查文件**：-e可用于文件和目录。要确定指定对象为文件，必须用-f。实例如下：
+    ```
+    #!/bin/bash
+
+    item_name=$HOME
+
+    echo 
+    echo "The item being checked: $item_name"
+    echo
+
+    if [ -e $item_name ]
+    then
+    echo "The item, $item_name, does exist."
+    echo "But is it a file?"
+    echo
+
+    if [ -f $item_name ]
+    then
+        echo "Yes, $item_name is a file."
+    else
+        echo "No, $item_name is not a file."
+    fi
+    else
+    echo "The item, $item_name, does not exist."
+    echo "Nothing to update"
+    fi
+
+    # 结果
+    [njust@njust tutorials]$ ./file3.sh 
+
+    The item being checked: /home/njust
+
+    The item, /home/njust, does exist.
+    But is it a file?
+
+    No, /home/njust is not a file.
+    ```
+- 对上述程序进行小修改，可以观察出结果的不同：
+    ```
+    #!/bin/bash
+
+    item_name=$HOME/tutorials/sentinel   # 注意此句！！！
+
+    echo 
+    echo "The item being checked: $item_name"
+    echo
+
+    if [ -e $item_name ]
+    then
+    echo "The item, $item_name, does exist."
+    echo "But is it a file?"
+    echo
+
+    if [ -f $item_name ]
+    then
+        echo "Yes, $item_name is a file."
+    else
+        echo "No, $item_name is not a file."
+    fi
+    else
+    echo "The item, $item_name, does not exist."
+    echo "Nothing to update"
+    fi
+
+    # 结果
+    [njust@njust tutorials]$ ./file3.sh 
+
+    The item being checked: /home/njust/tutorials/sentinel
+
+    The item, /home/njust/tutorials/sentinel, does exist.
+    But is it a file?
+
+    Yes, /home/njust/tutorials/sentinel is a file.
+    ```
+- **检查是否可读**：在尝试从文件中读取数据之前，最好先测试一下文件是否可读。可以使用-r比较测试。实例如下：
+    ```
+    #!/bin/bash
+
+
+    pwfile=/etc/shadow
+
+    if [ -f $pwfile ]
+    then
+    if [ -r $pwfile ]
+    then
+        tail $pwfile
+    else
+        echo "Sorry,I am unable to read the $pwfile file."
+    fi
+    else
+    "Sorry, the file $pwfile does not exist"
+    fi
+
+    # 结果
+    njust@njust tutorials]$ ./file4.sh 
+    Sorry,I am unable to read the /etc/shadow file.
+    ```
+- **检查空文件**：用-s比较来检查文件是否为空，尤其是在不想删除非空文件的时候。注意：**当-s比较成功时，说明文件中有数据**。实例如下所示：
+    ```
+    #!/bin/bash
+
+    file_name=$HOME/tutorials/sentinel
+
+    if [ -f $file_name ]
+    then
+    if [ -s $file_name ]
+    then
+        echo "The $file_name file exists and has data in it."
+        echo "Will not remove this file."
+    else
+        echo "The $file_name file exists, but is empty."
+        echo "Deleting empty file."
+        rm $file_name
+    fi
+
+    else 
+    echo "File,$file_name, does not exist."
+    fi
+
+    # 结果
+    [njust@njust tutorials]$ ./file5.sh 
+    The /home/njust/tutorials/sentinel file exists and has data in it.
+    Will not remove this file.
+    ```
+- **检查文件是否可写**：-w比较会判断你对文件是否有写的权限。具体实例如下所示：
+    ```
+    #!/bin/bash
+
+    item_name=$HOME/tutorials/sentinel
+
+    echo 
+    echo "The item being checked: $item_name."
+    echo
+
+    if [ -e $item_name ]
+    then
+    echo "The item, $item_name, does exist."
+    echo "But is it a file?"
+    echo
+    if [ -f $item_name ]
+    then 
+        echo "Yes, $item_name is a file."
+        echo "But is it writable?"
+        if [ -w $item_name ]
+        then
+        echo "Writing current time to $item_name."
+        date +%H%M >> $item_name
+        else
+        echo "Unable to write to $item_name."
+        fi
+    else
+        echo "No, $item_name is not a file."
+    fi
+    else
+    echo "The item,$item_name, does not exist."
+    echo "Nothing to update."
+    fi
+
+    # 结果
+    [njust@njust tutorials]$ ./file6.sh 
+
+    The item being checked: /home/njust/tutorials/sentinel.
+
+    The item, /home/njust/tutorials/sentinel, does exist.
+    But is it a file?
+
+    Yes, /home/njust/tutorials/sentinel is a file.
+    But is it writable?
+    Writing current time to /home/njust/tutorials/sentinel.
+    ```
+- **检查文件是否可执行**：-x比较是判断特定文件是否有执行权限的一个简单方法。如果你需要在shell脚本中运行大量脚本，它就能发挥作用。
+    ```
+    #!/bin/bash
+
+    if [ -x file5.sh ]
+    then
+    echo "You can run the script: "
+    ./file5.sh
+    else
+    echo "Sorry, you are unable to execute the script"
+    fi
+
+    # 结果
+    [njust@njust tutorials]$ ./file7.sh 
+    You can run the script: 
+    The /home/njust/tutorials/sentinel file exists and has data in it.
+    Will not remove this file.
+    ```
+- **检查所属关系**：-O可以测试你是否是文件的拥有者。实例如下所示：
+    ```
+    #!/bin/bash
+
+    if [ -O /etc/passwd ]
+    then
+    echo "You are the owner of the /etc/passwd file."
+    else
+    echo "Sorry,you are not the owner of the /etc/passwd file."
+    fi
+
+    # 结果
+    [njust@njust tutorials]$ ./file8.sh 
+    Sorry,you are not the owner of the /etc/passwd file.
+    ```
+- **检查默认属组关系**：-G比较会检查文件的默认组。如果它匹配了用户的默认组，则测试成功。-G比较只会检查默认组而非用户所属的所有组。
+    ```
+    #!/bin/bash
+
+    if [ -G $HOME/tutorials/sentinel ]
+    then
+    echo "You are in the same group as the file."
+    else
+    echo "The file is not owned by your group."
+    fi
+
+    # 结果
+    [njust@njust tutorials]$ ./file9.sh 
+    You are in the same group as the file.
+    ```
+- **检查文件日期**：主要用于对两个文件的创建日期进行比较。通常用于编写软件安装脚本时非常有用。-nt比较会判定一个文件是否比另一个文件新；如果文件较新，则它的文件创建日期更近。-ot比较会判断一个文件是否比另一文件旧。如果文件较旧，意味着它的创建日期更早。
+    ```
+    #!/bin/bash
+
+    if [ file9.sh -nt file1.sh ]
+    then
+    echo "The file9 file is newer than file1."
+    else
+    echo "The file1 file is newer than file9."
+    fi
+
+    if [ file7.sh -ot file9.sh ]
+    then
+    echo "The file7 file is older than the file9 file."
+    fi
+
+    # 结果
+    [njust@njust tutorials]$ ./file10.sh 
+    The file9 file is newer than file1.
+    The file7 file is older than the file9 file.
+    ```
+- 注意：**使用-nt或-ot比较文件之前，必须先确认文件是存在的**。因为-nt或-ot都不会先检查文件是否存在！
+    ```
+    #!/bin/bash
+
+    if [ file9.sh -nt file1.sh ]
+    then
+    echo "The file9 file is newer than file1."
+    else
+    echo "The file1 file is newer than file9."
+    fi
+
+    if [ file7.sh -ot file9.sh ]
+    then
+    echo "The file7 file is older than the file9 file."
+    fi
+
+    # 错误的结果，因为badfile1和badfile2文件根本就不存在！
+    [njust@njust tutorials]$ ./error.sh 
+    The badfile2 file is newer than badfile1.
+    ```
+
+#### 5.复合条件测试
+- if-then语句允许你使用布尔逻辑进行组合测试。有两种布尔运算符可以使用：
+    - [ 条件1 ] && [ 条件2 ]
+    - [ 条件1 ] || [ 条件2 ]
+- 复合条件测试案例如下所示：
+    ```
+    #!/bin/bash
+
+    if [ -d $HOME ] && [ -w $HOME/tutorials/sentinel ]
+    then 
+    echo "The file exists and you can write to it"
+    else
+    echo "I cannot write to the file"
+    fi
+
+    # 结果
+    [njust@njust tutorials]$ ./file11.sh 
+    The file exists and you can write to it
+    ```
+
+#### 6.if-then的高级特性
+- bash shell提供了两种可在if-then语句中使用的高级特性：
+    - 用于数学表达式的双括号；
+    - 用于高级字符串处理功能的双方括号；
+
+##### 6.1 使用双括号
+- 双括号命令允许你在比较的过程中使用高级数学表达式。test命令只能在比较的过程中使用简单的算术操作。双括号提供了更多的数学符号，双括号命令的格式如下：
+    ```
+    (( 表达式 ))
+    ```
+- 其中，表达式可以是任意的数学赋值或比较表达式。双括号命令符号如下所示：
+    ```
+    符号                                  说明
+    val++                                后置加加
+    val--                                后置减减
+    ++val                                前置加加
+    --val                                前置减减
+    !                                     取反
+    ~                                    按位取反
+    **                                    幂运算
+    <<                                   左移
+    >>                                   右移
+    &                                    按位与
+    |                                    按位或
+    &&                                   逻辑与
+    ||                                   逻辑或
+    ```
+- 可以在if语句中使用双括号命令，也可以在脚本中的普通命令里使用来赋值。实例如下所示：
+    ```
+    #!/bin/bash
+
+    val1=10
+    if (( $val1 ** 2 > 90 ))
+    then
+    (( val2 = $val1 ** 2 ))
+    echo "The square of $val1 is $val2"
+    fi
+
+    # 结果
+    [njust@njust tutorials]$ ./file12.sh
+    The square of 10 is 100
+    ```
+
+##### 6.2 使用双方括号
+- 双方括号命令提供了**针对字符串比较**的高级特性。双方括号的语法格式如下：
+    ```
+    [[ 表达式 ]]
+    ```
+- 注意：双方括号中的表达式使用了test命令中采用的标准字符串比较，但它额外还提供了test命令不具有的特性即**模式匹配**。同时，值得注意的是并不是所有的shell等支持方双括号。
+    ```
+    #!/bin/bash
+
+    if [[ $USER == n* ]]
+    then
+    echo "Hello $USER"
+    else
+    echo "Sorry, I do not know you"
+    fi
+
+    # 结果
+    [njust@njust tutorials]$ ./file13.sh 
+    Hello njust
+    ```
+
+#### 7.case命令
+- 使用case命令可以有效的减少使用if-then-else语句的出现次数，简化代码结构。case命令的语法结构如下所示：
+    ```
+    case 变量 in
+    变量可能取值1 | 变量可能取值2) 命令1;;
+    变量可能取值3) 命令2;;
+    *) default 命令3;;
+    esac
+    ```
+- case命令的具体实例如下所示：
+    ```
+    #!/bin/bash
+
+    case $USER in
+    njust | bar)
+    echo "Welcome, $USER"
+    echo "Please enjoy your visit";;
+    testing)
+    echo "Special testing account";;
+    jessica)
+    echo "Do not forget to log off when you're done.";;
+    *)
+    echo "Sorry,you are not allowed here";;
+    esac
+
+    # 结果
+    [njust@njust tutorials]$ ./case.sh 
+    Welcome, njust
+    Please enjoy your visit
+    ```
+#### 9.资料下载
+- [笔记，欢迎star,follow,fork......](https://github.com/cdlwhm1217096231/Linux/tree/master/Shell%E8%84%9A%E6%9C%AC%E7%BC%96%E7%A8%8B)
