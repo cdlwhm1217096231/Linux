@@ -6,7 +6,7 @@
     ```
     for var in list
     do 
-    命令...
+        命令...
     done
     ```
 - 在list参数中，需要提供迭代需要的一系列值。可以通过几种不同的方法指定列表中的值。
@@ -20,7 +20,7 @@
 
     for li in A B C D E F G
     do
-    echo The next state is $li
+        echo The next state is $li
     done
 
     # 结果
@@ -40,7 +40,7 @@
 
     for var in I don't know if this'll work
     do 
-    echo "word:$var"
+        echo "word:$var"
     done
 
     # 结果
@@ -56,7 +56,7 @@
 
     for var in I don\'t know if "this'll" work
     do 
-    echo "word:$var"
+        echo "word:$var"
     done
 
     # 结果
@@ -75,7 +75,7 @@
 
     for var in New York New Mexico North Carolina
     do
-    echo "Now going to $var"
+        echo "Now going to $var"
     done
 
     # 结果
@@ -94,7 +94,7 @@
 
     for var in "New York" "New Mexico" "North Carolina"
     do
-    echo "Now going to $var"
+        echo "Now going to $var"
     done
 
     # 结果
@@ -113,7 +113,7 @@
     list=$list" Blank"  # 使用赋值语句向$list变量包含的已有列表中添加一个值Blank，这是向变量中存储的已有文本字符串尾部添加文本的常用方法
     for var in $list
     do
-    echo "The current color is $var"
+        echo "The current color is $var"
     done
 
     # 结果
@@ -133,7 +133,7 @@
 
     for c in $(cat $file)
     do
-    echo "beautiful color:$c"
+        echo "beautiful color:$c"
     done
 
 
@@ -160,7 +160,7 @@
 
     for c in $(cat $file)
     do
-    echo "beautiful color:$c"
+        echo "beautiful color:$c"
     done
 
     # 结果
@@ -181,7 +181,7 @@
     ```
 - IFS环境变量的其他一些绝妙用法，假如你要遍历一个文件中用冒号分隔的值(比如/etc/passwd文件)，你需要做的就是将IFS设置为冒号IFS=：。
 - 如果要指定多个IFS字符，只要将它们在赋值行串起来就行，如IFS=$'\n':;"。
-##### 6.用通配符读取目录
+##### 1.6 用通配符读取目录
 - 可以用for命令来自动遍历目录中的文件，进行此操作时，**必须在文件名或路径名中使用通配符**。它会强制shell使用**文件扩展匹配**。文件扩展匹配是生成匹配指定通配符的文件名或路径名的过程。如下例所示：
     ```
     #!/bin/bash
@@ -189,13 +189,13 @@
     for file in /home/njust/tutorials/*
     do
 
-    if [ -d "$file" ]  # 在linux中文件名或目录名中包含空格是合法的，要解决这个问题可以将$file变量用双引号圈起来。如果不这样的话遇到含空格的目录名或文件名时会报错！
-    then
-        echo "$file is a directory"
-    elif [ -f "$file" ]
-    then
-        echo "$file is a file"
-    fi
+        if [ -d "$file" ]  # 在linux中文件名或目录名中包含空格是合法的，要解决这个问题可以将$file变量用双引号圈起来。如果不这样的话遇到含空格的目录名或文件名时会报错！
+        then
+            echo "$file is a directory"
+        elif [ -f "$file" ]
+        then
+            echo "$file is a file"
+        fi
     done
 
 
@@ -219,15 +219,15 @@
     for file in /home/njust/.b* /home/njust/tutorials
     do
 
-    if [ -d "$file" ]
-    then
-        echo "$file is a directory"
-    elif [ -f "$file" ]
-    then
-        echo "$file is a file"
-    else
-        echo "$file doesn't exist"
-    fi
+        if [ -d "$file" ]
+        then
+            echo "$file is a directory"
+        elif [ -f "$file" ]
+        then
+            echo "$file is a file"
+        else
+            echo "$file doesn't exist"
+        fi
     done
 
     # 结果
@@ -237,4 +237,291 @@
     /home/njust/.bash_profile is a file
     /home/njust/.bashrc is a file
     /home/njust/tutorials is a directory
+    ```
+#### 2.C语言风格的for命令
+- bash shell也支持一种for循环，它看起来与C语言风格的for循环类似，但有一些细微的不同。**bash中C语言风格的for循环基本格式如下**：
+    ```
+    for (( 变量初始化; 条件; 变量迭代变化 ))
+    ```
+- 注意：**有些部分并没有遵循bash shell标准的for命令**：
+    - 变量赋值可以有空格；
+    - 条件中的变量不以美元符开头；
+    - 迭代过程的算式未使用expr命令格式；
+- 以下是在bash shell程序中使用C语言风格的for命令：
+    ```
+    #!/bin/bash
+
+
+    for (( i = 1; i <= 10; i++ )) 
+    do 
+        echo "The next number is $i"
+    done
+
+    # 结果
+    [njust@njust tutorials]$ ./dana7.sh 
+    The next number is 1
+    The next number is 2
+    The next number is 3
+    The next number is 4
+    The next number is 5
+    The next number is 6
+    The next number is 7
+    The next number is 8
+    The next number is 9
+    The next number is 10
+    ```
+##### 2.1 使用多个变量
+- C语言风格的for命令也允许为迭代使用多个变量。循环会单独处理每个变量，可以为每个变量定义不同的迭代过程，**尽管可以使用多个变量，但只能在for循环中定义一种条件**。
+    ```
+    #!/bin/bash
+
+
+    # mutiple variables
+
+    for (( a = 1, b = 10; a <= 10; a++, b-- ))
+    do 
+        echo "$a - $b"
+    done
+
+    # 结果
+    [njust@njust tutorials]$ ./dana8.sh 
+    1 - 10
+    2 - 9
+    3 - 8
+    4 - 7
+    5 - 6
+    6 - 5
+    7 - 4
+    8 - 3
+    9 - 2
+    10 - 1
+    ```
+#### 3.while命令
+- while命令允许定义一个要测试的命令，然后循环执行一组命令，只要定义的测试命令返回的是退出状态码0，它会在每次迭代的一开始测试test命令。在test命令返回非零退出状态码时，while命令会停止执行那组命令。
+##### 3.1 while的基本格式
+- while命令的格式如下：
+    ```
+    while test 命令
+    do
+        命令
+    done
+    ```
+- while命令的关键点：**所指定的test 命令的退出状态码必须随着循环中运行的命令而改变。如果退出状态码不发生改变，while循环就会一直不停地执行下去**。最常见的test 命令的用法是用方括号检查循环命令中用到的shell变量的值，如下所示：
+    ```
+    #!/bin/bash
+
+    var1=10
+    while [ $var1 -gt 0 ]
+    do 
+        echo $var1
+        var1=$[ $var1 - 1 ]
+    done
+
+    # 结果
+    [njust@njust tutorials]$ ./dana9.sh 
+    10
+    9
+    8
+    7
+    6
+    5
+    4
+    3
+    2
+    1
+    ```
+##### 3.2 使用多个测试命令
+- while命令允许你在while语句行定义多个测试命令。**只有最后一个测试命令的退出状态码会被用来决定什么时候结束循环**。如下例所示：
+    ```
+    #!/bin/bash
+
+    var=10
+
+    while echo $var
+        [ $var  -ge 0 ]
+    do
+        echo "This is inside in the loop"
+        var=$[ $var - 1 ]
+    done
+
+    # 结果
+    [njust@njust tutorials]$ ./dana10.sh 
+    10
+    This is inside in the loop
+    9
+    This is inside in the loop
+    8
+    This is inside in the loop
+    7
+    This is inside in the loop
+    6
+    This is inside in the loop
+    5
+    This is inside in the loop
+    4
+    This is inside in the loop
+    3
+    This is inside in the loop
+    2
+    This is inside in the loop
+    1
+    This is inside in the loop
+    0
+    This is inside in the loop
+    -1
+    ```
+- 在含有多个命令的while语句中，在每次迭代中所有测试命令都会被执行，包括测试命令失败的最后一次迭代。注意：**指定多个测试命令时，每个测试命令都出现在单独的一行**。
+#### 4.until命令
+- until命令与while命令工作方式相反，until命令要求你指定一个**通常返回非零状态码的测试命令**。只有测试命令的退出状态码非零，bash shell才会执行循环中列出的命令。**一旦测试命令返回退出状态码0，循环就结束了**。until命令的基本格式如下所示：
+    ```
+    until test 命令
+    do
+        命令
+    done
+    ```
+- **可以在until命令语句中放入多个测试命令，只有最后一个命令的退出状态码决定了了bash shell是否执行已定义的命令**。如下例所示：
+    ```
+    #!/bin/bash
+
+
+    var=100
+
+    until [ $var -eq 0 ]
+    do
+        echo $var
+        var=$[ $var - 25 ]
+    done
+
+    # 结果
+    [njust@njust tutorials]$ ./dana11.sh 
+    100
+    75
+    50
+    25
+    ```
+- 与while命令相似，until命令在使用多个测试命令时要注意。shell会执行指定的多个测试命令，只有在最后一个命令成立时才会停止。如下例所示：
+    ```
+    #!/bin/bash
+
+
+    var=100
+
+    until echo $var
+        [ $var -eq 0 ]
+    do
+        echo "Inside the loop: $var"
+        var=$[ $var - 25 ]
+    done
+
+    # 结果
+    [njust@njust tutorials]$ ./dana12.sh 
+    100
+    Inside the loop: 100
+    75
+    Inside the loop: 75
+    50
+    Inside the loop: 50
+    25
+    Inside the loop: 25
+    0
+    ```
+#### 5.嵌套循环
+- 循环语句可以在循环内使用任意类型的命令，包括其他循环命令。这种循环称为嵌套循环。注意：**使用嵌套循环时，在迭代中使用迭代，与命令运行的次数是乘积关系**。如下例所示：
+    ```
+    #!/bin/bash
+
+    for (( a = 1; a <= 3; a++ ))
+    do
+        echo "Starting loop $a:"
+        for (( b = 1; b <= 3; b++ ))
+        do
+            echo "  Inside loop:$b"
+        done
+    done
+
+    # 结果
+    [njust@njust tutorials]$ ./dana13.sh 
+    Starting loop 1:
+    Inside loop:1
+    Inside loop:2
+    Inside loop:3
+    Starting loop 2:
+    Inside loop:1
+    Inside loop:2
+    Inside loop:3
+    Starting loop 3:
+    Inside loop:1
+    Inside loop:2
+    Inside loop:3
+    ```
+- 在混用循环命令时也一样，比如在while循环内部放置一个for循环。如下例所示：
+    ```
+    #!/bin/bash
+
+
+    var1=5
+
+    while [ $var1 -ge 0 ]
+    do
+        echo "Outer loop: $var1"
+        for (( var2 = 1; $var2 < 3; var2++ ))
+        do
+            var3=$[ $var1 * $var2 ]
+            echo "  Inner loop: $var1 * $var2 = $var3"
+        done
+        var1=$[ $var1 - 1 ]
+    done
+
+    # 结果
+    [njust@njust tutorials]$ ./dana14.sh 
+    Outer loop: 5
+    Inner loop: 5 * 1 = 5
+    Inner loop: 5 * 2 = 10
+    Outer loop: 4
+    Inner loop: 4 * 1 = 4
+    Inner loop: 4 * 2 = 8
+    Outer loop: 3
+    Inner loop: 3 * 1 = 3
+    Inner loop: 3 * 2 = 6
+    Outer loop: 2
+    Inner loop: 2 * 1 = 2
+    Inner loop: 2 * 2 = 4
+    Outer loop: 1
+    Inner loop: 1 * 1 = 1
+    Inner loop: 1 * 2 = 2
+    Outer loop: 0
+    Inner loop: 0 * 1 = 0
+    Inner loop: 0 * 2 = 0
+    ```
+#### 6.循环处理文件数据
+- 通常必须遍历存储在文件中的数据，这要求结合已讲过的两种技术：
+    - 使用嵌套循环；
+    - 修改IFS环境变量；
+- 通过修改IFS环境变量，就能强制for命令将文件中的每行都当成单独的一个条目来处理，即使数据中有空格也是如此。一旦从文件中提取出了单独的行，可能需要再次利用循环来提取行中的数据。典型的案例是**处理/etc/passwd文件中的数据，逐行遍历/etc/passwd文件，并将IFS变量的值改成冒号，这样就能分割开每行中的各个数据段**。如下例所示：
+    ```
+    #!/bin/bash
+
+    IFS.OLD=$IFS
+
+    IFS=$'\n'
+    for var in $( cat /etc/passwd )
+    do
+        echo "Values in $var -"
+        IFS=:
+        for v in $var
+        do
+            echo "  $v"
+        done
+    done
+
+    # 结果
+    [njust@njust tutorials]$ ./dana15.sh 
+    Values in root:x:0:0:root:/root:/bin/bash -
+    root
+    x
+    0
+    0
+    root
+    /root
+    /bin/bash
     ```
