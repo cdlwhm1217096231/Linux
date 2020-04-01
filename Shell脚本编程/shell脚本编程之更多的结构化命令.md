@@ -525,3 +525,341 @@
     /root
     /bin/bash
     ```
+#### 7.控制循环
+##### 7.1 break命令
+- break语句是退出循环的一个简单方法。可以使用break命令来退出任意类型的循环，包括while循环和until循环。
+- **跳出单个循环**：在shell执行break命令时，它会尝试跳出当前正在执行的循环。
+    ```
+    #!/bin/bash
+
+    for var in 1 2 3 4 5 6 7 8 9 10
+    do
+        if [ $var -eq 5 ]
+        then
+            break
+        fi
+        echo "Current number: $var"
+    done
+    echo "The for loop is completed"
+
+    # 结果
+    [njust@njust tutorials]$ ./dana16.sh 
+    Current number: 1
+    Current number: 2
+    Current number: 3
+    Current number: 4
+    The for loop is completed
+    ```
+- 跳出单个循环的情景同样也适用于while和until循环，如下例所示：
+    ```
+    #!/bin/bash
+
+
+    var=1
+
+    while [ $var -lt 10 ]
+    do
+        if [ $var -eq 5 ]
+        then
+            break
+        fi
+        echo "Iteration: $var"
+        var=$[ $var + 1 ]
+    done
+
+    echo "The while loop is completed"
+
+    # 结果
+    [njust@njust tutorials]$ ./dana17.sh 
+    Iteration: 1
+    Iteration: 2
+    Iteration: 3
+    Iteration: 4
+    The while loop is completed
+    ```
+- **跳出内部循环**：在处理多个循环时，**break命令会自动终止你所在的最内层的循环**。
+    ```
+    #!/bin/bash
+
+
+    for (( a =  1; a < 4; a++ ))
+    do
+        echo "Outer loop:$a"
+        for (( b = 1; b < 100; b++ ))
+        do
+            if [ $b -eq 5 ]
+            then
+                break
+            fi
+            echo "  Inner loop:$b"
+        done
+    done
+
+    # 结果
+    [njust@njust tutorials]$ ./dana18.sh 
+    Outer loop:1
+        Inner loop:1
+        Inner loop:2
+        Inner loop:3
+        Inner loop:4
+    Outer loop:2
+        Inner loop:1
+        Inner loop:2
+        Inner loop:3
+        Inner loop:4
+    Outer loop:3
+        Inner loop:1
+        Inner loop:2
+        Inner loop:3
+        Inner loop:4
+    ```
+- **跳出外部循环**：有时候你在内部循环，**但需要停止外部循环**。break命令接收单个命令行参数值：break n。n指定了要跳出的循环层级，默认情况下，n等于1，表示跳出的是当前的循环。如果n设置为2，break命令会停止下一级的外部循环。如下例所示：
+    ```
+    #!/bin/bash
+
+    for (( a = 1; a < 4; a++ ))
+    do
+        echo "Outer loop:$a"
+        for (( b = 1; b < 100; b++ ))
+        do
+            if [ $b -gt 4 ]
+            then
+                break 2
+            fi
+            echo "  Inner loop:$b"
+        done
+    done 
+
+    # 结果
+    [njust@njust tutorials]$ ./dana19.sh 
+    Outer loop:1
+        Inner loop:1
+        Inner loop:2
+        Inner loop:3
+        Inner loop:4
+    ```
+##### 7.2 continue命令
+- continue命令可以**提前中止某次循环中的命令**，但并不会完全终止整个循环。可以在循环内部设置shell不执行命令的条件。如下例所示：
+    ```
+    #!/bin/bash
+
+    for (( a = 1; a < 15; a++ ))
+    do
+        if [ $a -gt 5 ] && [ $a -lt 10 ]
+        then
+            continue
+        fi
+        echo "Iteration number: $a"
+    done
+
+    # 结果
+    Iteration number: 1
+    Iteration number: 2
+    Iteration number: 3
+    Iteration number: 4
+    Iteration number: 5
+    Iteration number: 10
+    Iteration number: 11
+    Iteration number: 12
+    Iteration number: 13
+    Iteration number: 14
+    ```
+- 也可以在while或until循环中使用continue命令，但是特别小心。**当shell执行continue命令时，它会跳过剩余的命令。如果你在其中某个条件里对测试条件变量进行增值，问题就会出现**。
+    ```
+    #!/bin/bash
+
+    var1=0
+
+    while echo "while iteration: $var1"
+          [ $var1 -lt 15 ]
+    do
+        if [ $var1 -gt 5 ] && [ $var1 -lt 10 ]
+        then
+            continue  # 当shell执行continue命令时，它跳过了while循环中余下的命令。
+        fi
+        echo "  Inside iteration number:$var1"
+        var1=$[ $var1 + 1 ]
+    done
+
+    # 结果
+    [njust@njust tutorials]$ ./dana21.sh 
+    while iteration: 0
+    Inside iteration number:0
+    while iteration: 1
+    Inside iteration number:1
+    while iteration: 2
+    Inside iteration number:2
+    while iteration: 3
+    Inside iteration number:3
+    while iteration: 4
+    Inside iteration number:4
+    while iteration: 5
+    Inside iteration number:5
+    while iteration: 6
+    while iteration: 6
+    while iteration: 6
+    while iteration: 6
+    while iteration: 6
+    while iteration: 6
+    while iteration: 6
+    while iteration: 6
+    while iteration: 6
+    while iteration: 6
+    ```
+- 和break命令类似，continue命令也允许通过命令行参数指定要继续执行哪一级循环：continue n。其中n定义了要继续的循环层级，如下例所示：
+    ```
+    #!/bin/bash
+
+
+    for (( a = 1; a <= 5; a++ ))
+    do
+        echo "Iteration: $a"
+        for (( b = 1; b < 3; b++ ))
+        do 
+            if [ $a -gt 2 ] && [ $a -lt 4 ]
+            then
+                continue 2 
+            fi
+            var=$[ $a * $b ]
+            echo "  The result of $a * $b is $var"
+        done
+    done 
+
+    # 结果
+    [njust@njust tutorials]$ ./dana22.sh 
+    Iteration: 1
+    The result of 1 * 1 is 1
+    The result of 1 * 2 is 2
+    Iteration: 2
+    The result of 2 * 1 is 2
+    The result of 2 * 2 is 4
+    Iteration: 3
+    Iteration: 4
+    The result of 4 * 1 is 4
+    The result of 4 * 2 is 8
+    Iteration: 5
+    The result of 5 * 1 is 5
+    The result of 5 * 2 is 10
+    ```
+#### 8.处理循环的输出
+- 在shell脚本中，可以对循环的输出使用管道或进行重定向。**可以通过在done命令后添加一个处理命令来实现**。如下例所示：
+    ```
+    #!/bin/bash
+
+
+    for file in /home/njust/*
+    do
+        if [ -d "$file" ]
+        then
+            echo "$file is a directory"
+        else
+            echo "$file is a file"
+        fi
+    done > output.txt
+
+
+    # 结果
+    [njust@njust tutorials]$ cat output.txt 
+    /home/njust/sentinel is a file
+    /home/njust/tutorials is a directory
+    /home/njust/公共 is a directory
+    /home/njust/模板 is a directory
+    /home/njust/视频 is a directory
+    /home/njust/图片 is a directory
+    /home/njust/文档 is a directory
+    /home/njust/下载 is a directory
+    /home/njust/音乐 is a directory
+    /home/njust/桌面 is a directory
+    ```
+- 上述方法同样适用于将循环的结果通过管道传给另一个命令，如下例所示：
+    ```
+    #!/bin/bash
+
+    for state in "North Dakota" Pink Blue Green Red
+    do
+        echo "$state is the next place to go"
+    done | sort
+
+    echo "This completes our travels"
+
+
+    # 结果
+    [njust@njust tutorials]$ ./dana24.sh 
+    Blue is the next place to go
+    Green is the next place to go
+    North Dakota is the next place to go
+    Pink is the next place to go
+    Red is the next place to go
+    This completes our travels
+    ```
+#### 9.循环实例
+- **查找可执行文件**
+    ```
+    #!/bin/bash
+
+
+    IFS=:
+
+    for folder in $PATH
+
+    do
+        echo "$folder"
+        for file in $folder/*
+        do
+            if [ -x $file ]
+            then
+                echo "  $file"
+            fi
+        done
+    done
+
+    # 结果
+    /sbin/vgextend
+    /sbin/vgimport
+    /sbin/vgimportclone
+    /sbin/vgmerge
+    /sbin/vgmknodes
+    /sbin/vgreduce
+    /sbin/vgremove
+    /sbin/vgrename
+    /sbin/vgs
+    /sbin/vgscan
+    /sbin/vgsplit
+    /sbin/vigr
+    ```
+- **创建多个用户账户**
+    ```
+    #!/bin/bash
+
+
+    input="users.txt"  # users.txt文件需提前创建，文件内容为：userid,username
+
+    while IFS=',' read -r userid name
+    do
+        echo "adding $userid"
+        useradd -c "$name" -m $userid
+
+    done < "$input"
+
+    # 结果，必须用root用户才能运行此脚本，因为useradd命令需要root权限！
+    [root@njust tutorials]# ./dana26.sh
+    adding C001
+    adding D002
+    adding H003
+    adding J004
+
+    # 验证
+    [root@njust tutorials]# tail /etc/passwd
+    postfix:x:89:89::/var/spool/postfix:/sbin/nologin
+    ntp:x:38:38::/etc/ntp:/sbin/nologin
+    tcpdump:x:72:72::/:/sbin/nologin
+    njust:x:1000:1000:njust:/home/njust:/bin/bash
+    shenchao:x:1001:1001::/home/shenchao:/bin/bash
+    userid:x:1002:1003:name:/home/userid:/bin/bash
+    C001:x:1003:1004:curry:/home/C001:/bin/bash
+    D002:x:1004:1005:durant:/home/D002:/bin/bash
+    H003:x:1005:1006:harden:/home/H003:/bin/bash
+    J004:x:1006:1007:james:/home/J004:/bin/bash
+    ```
+#### 10.资料下载
+- [笔记，欢迎star,follow,fork......](https://github.com/cdlwhm1217096231/Linux/tree/master/Shell%E8%84%9A%E6%9C%AC%E7%BC%96%E7%A8%8B)
