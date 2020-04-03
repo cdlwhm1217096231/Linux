@@ -300,3 +300,273 @@
     The original parameters: 3 4 253 5 38
     Here's the new first parameter: 253
     ```
+#### 4.处理选项
+- 选项是跟在单折线后面的单个字母，它能改变命令的行为。下面将介绍3种在脚本中处理选项的方法。
+##### 4.1 查找选项
+- **处理简单选项**：在提取每个单独参数时，用case语句来判断某个参数是否为选项。如下例所示：
+    ```
+    #!/bin/bash
+
+
+    while [ -n "$1" ]
+    do
+        case "$1" in
+            -a) echo "Found the -a option";;
+            -b) echo "Found the -b option";;
+            -c) echo "Found the -c option";;
+            *) echo "$1 is not an option";;
+        esac
+        shift
+    done
+
+    # 结果
+    [njust@njust tutorials]$ ./bar16.sh -a -b -c -d
+    Found the -a option
+    Found the -b option
+    Found the -c option
+    -d is not an option
+    ```
+- **分离参数和选项**：在shell脚本中同时使用选项和参数的情况，Linux中处理这个问题的标准方法是用特殊字符来将两者分开，该字符会告诉脚本何时选项结束以及普通参数何时开始。对Linux来说，这个特殊字符是\-\-，shell会用双破折线来表明选项列表已经结束。在双破折线后，脚本就可以放心将剩下的命令行参数当作参数，而不是选项。如下例所示：
+    ```
+    #!/bin/bash
+
+    while [ -n "$1" ]
+    do
+        case "$1" in
+            -a) echo "Found the -a option";;
+            -b) echo "Found the -b option";;
+            -c) echo "Found the -c option";;
+            --) shift
+                break;;
+            *) echo "$1 is not an option";;
+        esac
+        shift
+    done
+
+    count=1
+
+    for param in $@
+    do
+        echo "Parameter #$count: $param"
+        count=$[ count + 1 ]
+    done
+
+    # 结果
+    [njust@njust tutorials]$ ./bar17.sh -c -a -b -- test1 test2 test3
+    Found the -c option
+    Found the -a option
+    Found the -b option
+    Parameter #1: test1
+    Parameter #2: test2
+    Parameter #3: test3
+    ```
+- **处理带值的选项**：有些选项会带上一个额外的参数值，如./bar666.sh -a test1 -b -c -d test2。当命令行选项要求额外的参数时，脚本必须能检测到并正确处理。如下例所示：
+    ```
+    #!/bin/bash
+
+
+    while [ -n "$1" ]
+    do
+        case "$1" in
+            -a) echo "Found the -a option";;
+            -b) param="$2"
+                echo "Found the -b option,with parameter value $param."
+                shift;;
+            -c) echo "Found the -c option";;
+            --) shift
+                break;;
+            *) echo "$1 is not an option";;
+        esac
+        shift
+    done
+
+
+    count=1
+    for param in "$@"
+    do
+        echo "Parameter #$count: $param"
+        count=$[ $count + 1 ]
+    done
+
+    # 结果
+    [njust@njust tutorials]$ ./bar19.sh -a -b test1 -f -- demo1 demo2
+    Found the -a option
+    Found the -b option,with parameter value test1.
+    -f is not an option
+    Parameter #1: demo1
+    Parameter #2: demo2
+    ```
+##### 4.2 使用getopt命令
+- getopt命令是一个在处理命令行选项和参数时非常方便的工具，它能识别命令行参数，从而在脚本中解析它们时更方便。
+- **命令格式**：getopt命令可以接受一系列任意形式的命令行选项和参数，并自动转换成适当的格式，具体命令格式如下所示：
+    ```
+    getopt optstring parameters
+    ```
+- optstring定义了命令行有效的选项字母，还定义了哪些选项字母需要参数值。**optstring中列出了要在脚本中用到的每个命令行选项字母。然后，在每个需要参数值的选项字母后加一个冒号**。注意：getopt命令有一个更高级的版本即getopts，注意两者的区别。具体实例如下所示：
+    ```
+    [njust@njust tutorials]$ getopt ab:cd -a -b test1 -cd test2 test3
+    -a -b test1 -c -d -- test2 test3
+    ```
+- 上述实例中，optstring定义了四个有效选项字母：a、b、c、d。字母b后面的冒号表示b选项需要一个参数值。**注意：getopt命令会将-cd选项分成两个单独的选项，并插入双破折线来分隔行中的额外参数**。
+- 如果指定了一个不在abcd选项中的参数，默认情况下，getopt命令会产生一条错误的信息。如下所示：
+    ```
+    [njust@njust tutorials]$ getopt ab:cd -a -b test1 -cdf test2 test3
+    getopt：无效选项 -- f
+    -a -b test1 -c -d -- test2 test3
+    ```
+- 如果需要忽略这条错误信息，可以在命令后加上-q选项，如下所示：
+    ```
+    [njust@njust tutorials]$ getopt -q ab:cd -a -b test1 -cdf test2 test3
+    -a -b 'test1' -c -d -- 'test2' 'test3'
+    ```
+- **在脚本中使用getopt**：用getopt命令生成的格式后的版本来替换自己已有的命令行选项和参数，用set命令能够做到。set命令使用的方法如下：
+    ```
+    set -- $(getopt -q ab:cd "$@")
+    ```
+- 利用上述方法，可以帮我们处理命令行参数的脚本。如下例所示：
+    ```
+    #!/bin/bash
+
+
+    set -- $(getopt -q ab:cd "$@")   # 注意此条语句！！！
+
+    while [ -n "$1" ]
+    do
+        case "$1" in
+            -a) echo "Found the -a option";;
+            -b) param="$2"
+                echo "Found the -b option,with parameter value $param."
+                shift;;
+            -c) echo "Found the -c option";;
+            --) shift
+                break;;
+            *) echo "$1 is not an option";;
+        esac
+        shift
+    done
+
+
+    count=1
+    for param in "$@"
+    do
+        echo "Parameter #$count: $param"
+        count=$[ $count + 1 ]
+    done
+
+    # 结果
+    [njust@njust tutorials]$ ./bar20.sh -ac  # 合并选项情况下也能处理!
+    Found the -a option
+    Found the -c option
+    ```
+- **但是，getopt命令也存在一个小问题。它并不擅长处理带空格和引号的参数值。它会将空格当成参数分隔符，而不是根据双引号将两者看成一个参数，解决方法是使用更高级的getopts命令**。
+    ```
+    [njust@njust tutorials]$ ./bar20.sh -a -b test1 -c "test2 test3" test4
+    Found the -a option
+    Found the -b option,with parameter value 'test1'.
+    Found the -c option
+    Parameter #1: 'test2
+    Parameter #2: test3'
+    Parameter #3: 'test4'
+    ```
+##### 4.3 使用更高级的getopts命令
+- getopts命令是shell中的内建命令，它比getopt命令多了一些扩展功能。getopt命令将命令行上选项和参数处理后只生成一个输出，而getopts命令能够和已有的shell参数变量配合使用。每次调用它时，它一次只处理命令行上检测到的一个参数，处理完所有的参数后，它会退出并返回一个大于0的退出状态码，这让它非常适合用解析命令行所有参数的循环中。getopts命令的格式如下：
+    ```
+    getopts optstring variable
+    ```
+- optstring值类似于getopt命令中的那个，**getopts命令将当前参数保存在命令行中定义的variable中**。getopts命令会用到两个环境变量，如果选项需要跟一个参数值，OPTARG环境变量就会保存这个值，OPTIND环境变量保存了参数列表中getopts正在处理的参数位置，这样你就能在处理完选项后继续处理其他命令行参数了。如下例所示：
+    ```
+    #!/bin/bash
+
+
+    while getopts :ab:c opt
+    do
+        case "$opt" in
+            a) echo "Found the -a option";; # 注意：getopts命令在解析命令行选项时会移除开头的单破折线，所以在case定义中不用单破折线！
+            b) echo "Found the -b option,with value $OPTARG";;
+            c) echo "Found the -c option";;
+            *) echo "Unknown option: $opt";;
+        esac
+    done
+
+    # 结果
+    [njust@njust tutorials]$ ./bar21.sh  -ab test1 -c
+    Found the -a option
+    Found the -b option,with value test1
+    Found the -c option
+
+    ```
+- getopts命令的优点之一是可以在参数值中包含空格，如下例所示：
+    ```
+    [njust@njust tutorials]$ ./bar21.sh  -b "test1 test2" -a
+    Found the -b option,with value test1 test2
+    Found the -a option
+    ```
+getopts命令的另一个优点是将选项字母和参数值放在一起使用，而不用加空格。如下例所示：
+    ```
+    [njust@njust tutorials]$ ./bar21.sh  -abdemo1
+    Found the -a option
+    Found the -b option,with value demo1
+    ```
+- 此外，getopts命令还可以将命令行上找到的所有未定义的选项统一输出为问号，如下例所示：
+    ```
+    [njust@njust tutorials]$ ./bar21.sh  -acdf
+    Found the -a option
+    Found the -c option
+    Unknown option: ?
+    Unknown option: ?
+    ```
+- getopts命令知道何时停止处理选项，并将参数留给你处理。在getopts处理每个选项时，它会将OPTIND环境变量值加1，在getopts完成处理时，使用shift命令和OPTIND值来移动参数。如下例所示：
+    ```
+    #!/bin/bash
+
+
+    while getopts :ab:cd opt
+    do
+        case "$opt" in
+            a) echo "Found the -a option";;
+            b) echo "Found the -b option,with value $OPTARG";;
+            c) echo "Found the -c option";;
+            d) echo "Found the -d option";;
+            *) echo "Unknown option: $opt";;
+        esac
+    done
+
+    shift $[ $OPTIND - 1 ]
+
+    count=1
+    for param in "$@"
+    do
+        echo "Parameter $count:$param"
+        count=$[ $count + 1 ]
+    done
+
+    # 结果
+    [njust@njust tutorials]$ ./bar22.sh -a -b test1 -d test2 test3 test4
+    Found the -a option
+    Found the -b option,with value test1
+    Found the -d option
+    Parameter 1:test2
+    Parameter 2:test3
+    Parameter 3:test4
+    ```
+#### 5.将选项标准化
+- 下面是Linux中常用到的一些命令行选项的含义。
+    ```
+    选项                               含义
+    -a                             显示所有对象
+    -c                             生成一个计数
+    -d                             指定一个目录
+    -e                             扩展一个对象
+    -f                             指定读入数据的文件
+    -h                             显示命令的帮助信息
+    -i                             忽略文本大小写
+    -l                             产生输出的长格式版本
+    -n                             使用非交互模式
+    -o                             将所有输出重定向到指定的输出文件
+    -q                             以安静模式运行
+    -r                             递归地处理目录和文件
+    -s                             以安静模式运行
+    -v                             生成详细输出
+    -x                             排除某个对象
+    -y                             对所有问题回答yes
+    ```
