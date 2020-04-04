@@ -570,3 +570,127 @@ getopts命令的另一个优点是将选项字母和参数值放在一起使用�
     -x                             排除某个对象
     -y                             对所有问题回答yes
     ```
+#### 6.获得用户输入
+- 尽管命令行选项和参数是从脚本用户处获得输入的一种重要方式，但是有时候脚本的交互性还需要更强一些。例如在运行脚本时问一个问题，并等待运行脚本的人来回答，**bash shell为此提供了read命令**。
+##### 6.1 基本的读取
+- read命令从标准输入或另一个文件描述符中接收输入。在收到输入后，read命令会将数据放进一个变量，如下例所示：
+    ```
+    #!/bin/bash
+
+
+    echo -n "Please Enter your name: "  # -n选项不会在字符串末尾输出换行符，允许脚本用户紧跟其后输入数据，而不是在下一行输入！
+    read name
+    echo "Hello $name,welcome to my home."
+
+    # 结果
+    [njust@njust tutorials]$ ./bar23.sh 
+    Please Enter your name: Curry   # 自己输入的！
+    Hello Curry,welcome to my home.
+    ```
+- read命令包含了-p选项，它允许你直接在read命令行指定提示符，如下例所示：
+    ```
+    #!/bin/bash
+
+
+    read -p "Please Enter your age: " age
+    days=$[ $age * 365 ]
+    echo "That makes you over $days days old"
+
+    # 结果
+    [njust@njust tutorials]$ ./bar24.sh 
+    Please Enter your age: 28
+    That makes you over 10220 days old
+    ```
+- 也可以在read命令行中不指定变量，read命令会将它收到的任何数据都放进特殊环境变量REPLY中，REPLY环境变量会保存输入的所有数据，可以在shell脚本中像其他变量一样使用。如下例所示：
+    ```
+    #!/bin/bash
+
+
+    read -p "Enter your name: "
+    echo "Hello $REPLY,welcome to NewYork."
+
+    # 结果
+    [njust@njust tutorials]$ ./bar25.sh 
+    Enter your name: Stephen Curry
+    Hello Stephen Curry,welcome to NewYork.
+    ```
+##### 6.2 超时
+- 使用read命令时一定要注意，脚本很可能会一直等待用户的输入。如果不管是否有数据输入，脚本都必须继续执行，可以使用-t选项来指定一个计数器。-t选项指定了read命令等待输入的秒数，当计数器超时后，read命令会返回一个非零退出状态码，如下例所示：
+    ```
+    #!/bin/bash
+
+
+    if read -t 5 -p "Please enter your name: " name
+    then
+        echo "Hello $name,welcome to NewYork."
+    else
+        echo 
+        echo "Sorry, it's wrong!"
+    fi
+
+    # 结果
+    [njust@njust tutorials]$ ./bar26.sh 
+    Please enter your name: 
+    Sorry, it's wrong!
+    ```
+- 也可以不对输入过程计时，而是让read命令来统计输入的字符数，当输入的字符达到预设的字符数时，就自动退出，将输入的数据赋值给变量。如下例所示：
+    ```
+    #!/bin/bash
+
+
+    read -n1 -p "Do you want to continue [Y/N]? " answer
+    case $answer in
+        Y | y) echo
+                echo "Fine,continue on...";;
+        N | n) echo
+                echo "Ok,goodbye"
+                exit;;
+    esac
+    echo "This is the end of the script"
+
+
+    # 结果
+    [njust@njust tutorials]$ ./bar27.sh 
+    Do you want to continue [Y/N]? Y
+    Fine,continue on...
+    This is the end of the script
+    ```
+- 上述例子中，-n选项与值1一起使用，它告诉read命令在接收单个字符后退出。只要按下单个字符后，read命令就会接收输入并将它传给变量，无需按下回车键。
+##### 6.3 隐藏方式读取
+- 有时候需要从用户输入处得到输入，但又不能在屏幕中显示输入。其中典型的例子就是输入的密码，此外还有很多其他需要隐藏的数据类型。-s选项可以避免在read命令中输入的数据出现在屏幕上，如下例所示：
+    ```
+    #!/bin/bash
+
+
+    read -s -p "Enter you password: " passwd
+    echo
+    echo "Is your password really $passwd? "
+
+    # 结果
+    [njust@njust tutorials]$ ./bar28.sh 
+    Enter you password: 
+    Is your password really 12345? 
+    ```
+##### 6.4 从文件中读取
+- 可以用read命令来读取Linux系统上文件中保存的数据，每次调用read命令，它都会从文件中读取一行文本。当文本中没有内容时，read命令会退出并返回非零退出状态码。注意：**最难的部分是将文件中的数据传给read命令，最常见的方法是对文件使用cat命令，将结果通过管道直接传给含有read命令的while命令**。如下例所示：
+    ```
+    #!/bin/bash
+
+    count=1
+
+    cat demodemo | while read line
+    do
+        echo "Line $count: $line"
+        count=$[ $count + 1 ]
+    done
+    echo "Finished processing the file"
+
+    # 结果
+    [njust@njust tutorials]$ ./bar29.sh 
+    Line 1: The quick brown dog jumps over the lazy fox.
+    Line 2: This is a test, this is only a test.
+    Line 3: O Romeo, Romeo!Wherefore art thou Romeo?
+    Finished processing the file
+    ```
+#### 7.资料下载
+- [笔记，欢迎star,follow,fork......](https://github.com/cdlwhm1217096231/Linux/tree/master/Shell%E8%84%9A%E6%9C%AC%E7%BC%96%E7%A8%8B)
