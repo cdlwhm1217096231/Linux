@@ -193,3 +193,124 @@
     Line #3: This is the third line.
     ```
 #### 4.创建自己的重定向
+- 在脚本中重定向输入和输出时，并不局限0、1、2这三个默认的文件描述符。前面已经说过，在shell中最多可以有9个打开的文件描述符。**其他六个从3~8的文件描述符均可用于输入或输出重定向。可以将这些文件描述符中的任意一个分配给文件，然后在脚本中使用**。
+##### 4.1 创建输出文件描述符
+- 可以使用exec命令来给输出分配文件描述符，和标准的文件描述符一样，**一旦将另一个文件描述符分配给一个文件，这个重定向就会一直有效，直到你重新分配为止**。如下例所示：
+    ```
+    #!/bin/bash
+
+    exec 3>test3out
+
+    echo "This should display on the monitor."
+    echo "and this should be stored in the file." >&3   # 注意这句！
+    echo "Then this should be back on the monitor."
+
+    # 结果
+    [njust@njust tutorials]$ ./foo5.sh 
+    This should display on the monitor.
+    Then this should be back on the monitor.
+    [njust@njust tutorials]$ cat test3out 
+    and this should be stored in the file.
+    ···
+- 也可以不用创建新文件，而是使用exec命令来将输出追加到现有文件中，如下例所示：
+    ```
+    exec 3>> test3out
+    ```
+##### 4.2 重定向文件描述符
+- 你可以分配另外一个文件描述符给标准文件描述符，反之亦然。这表示你可以将STDOUT的原来位置重定向到另一个文件描述符，然后再利用该文件描述符重定向回STDOUT。如下例所示：
+    ```
+    #!/bin/bash
+
+    exec 3>&1  # 首先脚本将文件描述符3重定向到文件描述符1的当前位置，即STDOUT。因此，任何发送给文件描述符3的输出都将出现的屏幕上。
+    exec 1>test4file  # 将STDOUT重定向到文件，shell现在会将发送给STDOUT的输出直接重定向到输出文件中。
+
+    echo "This should store in the output file."
+    echo "along with this line."
+
+    exec 1>&3  
+    echo "Now things should be back to normal."
+
+    # 结果
+    [njust@njust tutorials]$ ./foo6.sh 
+    Now things should be back to normal.
+    [njust@njust tutorials]$ cat test4file 
+    This should store in the output file.
+    along with this line.
+    ```
+##### 4.3 创建输入文件描述符
+- 可以用和重定向输出文件描述符同样的方法重定向输入文件描述符，在重定向到文件之前，先将STDOUT文件描述符保存到另一个文件描述符，然后在读取完文件之后再将STDIN恢复到它原来的位置。
+    ```
+    #!/bin/bash
+
+    exec 6<&0   # 文件描述符6用来保存STDIN的位置，然后脚本将STDIN重定向到一个文件
+
+    exec 0<test4file
+
+
+    count=1
+
+    while read line   # read命令的所有输入都来自重定向后的STDIN(输入文件)
+    do
+    echo "Line #$count: $line"
+    count=$[ $count + 1 ]
+    done
+
+    exec 0<&6   # 在读取了所有行之后，脚本会将STDIN重定向到文件描述符6，从而将STDIN恢复到原先的位置
+    read -p "Are you done now? " answer
+    case $answer in
+    Y|y) echo "Goodbye!";;
+    N|n) echo "Sorry,this is the end.";;
+    esac
+
+    # 结果
+    [njust@njust tutorials]$ ./foo7.sh
+    Line #1: This should store in the output file.
+    Line #2: along with this line.
+    Are you done now? y 
+    Goodbye!
+    ```
+##### 4.4 创建读写文件描述符
+- 可以打开单个文件描述符来作为输入和输出，可以用同一个文件描述符对同一文件进行读写。由于对同一文件进行数据读写，shell会维护一个内部指针，指明在文件中的当前位置。任何读或写都会从文件指针上次的位置开始，如果不小心它会产生意外的结果，如下例所示：
+    ```
+    #!/bin/bash
+
+
+    exec 3<> test4file
+
+    read line <&3
+
+    echo "Read: $line"
+    echo "This is a test line" >&3
+
+    # 结果
+    [njust@njust tutorials]$ ./foo8.sh 
+    Read: This should store in the output file.
+    [njust@njust tutorials]$ cat test4file
+    This should store in the output file.
+    This is a test line.
+    ```
+##### 4.5 关闭文件描述符
+- 如果你创建了新的输入或输出文件描述符，shell会在脚本退出时自动关闭它们。然而在有些情况下，需要在脚本结束前手动关闭文件描述符。要关闭文件描述符，将它重定向到特殊符号\&-，例子如下：exec 3>&-。此语句会关闭文件描述符3，不再在脚本中使用它。如下例所示：
+    ```
+    #!/bin/bash
+
+
+    exec 3> test8file
+
+    echo "This is a test line of data." >&3
+
+    exec 3>&-
+
+    echo "This won't work." >&3
+
+    # 结果
+    [njust@njust tutorials]$ ./foo9.sh 
+    ./foo9.sh:行10: 3: 错误的文件描述符
+    ```
+- 一旦关闭了文件描述符，就不能在脚本中向它写入任何数据，否则shell会生成错误消息。在关闭文件描述符时注意：**如果随后在脚本中打开了同一输出文件，shell会用一个新文件来替换已有文件。这意味着如果你输出数据，它就会覆盖已有文件**。如下例所示：
+    ```
+    [njust@njust tutorials]$ ./foo9.sh 
+    This is a test line of data.
+    [njust@njust tutorials]$ cat test8file
+    This'll be bad.
+    ```
