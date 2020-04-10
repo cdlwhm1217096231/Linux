@@ -99,3 +99,97 @@
     -rwxrw-r--. 1 njust njust 114 4月   4 21:37 test
     ```
 - 通过上例可以看出，当使用\&>符时，命令生成的所有输出都会发送到同一个位置，包括数据和错误。注意：其中一条错误消息出现的位置，**为了避免错误信息散落在输出文件中，相对于标准输出，bash shell自动赋予了错误消息更高的优先级，这样就能集中的浏览错误消息了**。
+#### 2.在脚本中重定向输出
+- 可以在脚本中使用STDOUT和STDERR文件描述符在多个位置生成输出，只要简单地重定向相应的文件描述符即可。有两种方法在脚本中重定向输出：
+    - 临时重定向行输出
+    - 永久重定向脚本中的所有命令
+##### 2.1 临时重定向
+- 如果有意在脚本中生成错误消息，可以将单独的一行输出重定向到STDERR。所要做的是使用输出重定向符来将输出信息重定向到STDERR文件描述符。在重定向到文件描述符时，你必须在文件描述符数字之前加一个&，如下所示：
+    ```
+    echo "This is an error message" >&2
+    ```
+- 上述这行脚本的STDERR文件描述符所指向的位置显示文本，而不是普通的STDOUT。就像下面实例那样：
+    ```
+    #!/bin/bash
+
+    echo "This is an error." >&2   # 重点！！！
+    echo "This is normal output."
+
+    # 结果
+    [njust@njust tutorials]$ ./foo1.sh 
+    This is an error.
+    This is normal output.
+
+    # 默认情况下，Linux会将STDERR导向STDOUT。但是，如果你在运行脚本时重定向了STDERR，脚本中所有导向STDERR的文本都会被重定向。
+    [njust@njust tutorials]$ ./foo1.sh 2> foo1-display 
+    This is normal output.
+    [njust@njust tutorials]$ cat foo1-display 
+    This is an error.
+    ```
+- 在上例中，STDOUT显示的文本显示在了屏幕上，而发送给STDERR的echo语句的文本则被重定向到了输出文件。这个方法很适合在脚本中生成错误消息。
+##### 2.2 永久重定向
+- 如果脚本中有大量数据需要重定向，那重定向每个echo语句就很麻烦。因此，**你可以使用exec命令告诉shell在脚本执行期间重定向某个特定文件描述符**。如下例所示：
+    ```
+    #!/bin/bash
+
+    exec 1> testout   # 重点！！！
+
+    echo "This is a test of redirecting all output."
+    echo "From a script to another file."
+    echo "without having to redirect every individual line."
+
+    # 结果
+    [njust@njust tutorials]$ ./foo2.sh 
+    [njust@njust tutorials]$ cat testout
+    This is a test of redirecting all output.
+    From a script to another file.
+    without having to redirect every individual line.
+    ```
+- exec命令会启动一个新shell并将STDOUT文件描述符重定向到文件中。脚本中发给STDOUT的所有输出都会被重定向到文件中。可以在脚本执行过程中重定向STDOUT，如下例所示：
+    ```
+    #!/bin/bash
+
+
+    exec 2> testerror
+
+    echo "This is the start of the script."
+    echo "now redirecting all output to another location."
+
+    exec 1> testout
+
+    echo "This output should go to the testout file."
+    echo "but this should go to the testerror file." >&2
+
+    # 结果
+    [njust@njust tutorials]$ ./foo3.sh 
+    This is the start of the script.
+    now redirecting all output to another location.
+    [njust@njust tutorials]$ cat testout 
+    This output should go to the testout file.
+    [njust@njust tutorials]$ cat testerror 
+    but this should go to the testerror file.
+    ```
+- 当你只想将脚本的部分输出重定向到其他位置时，上述这个特性用起来很方便。但是，一旦重定向了STDOUT或STDERR，就很难再将它们重定向会原来的位置。
+#### 3.在脚本中重定向输入
+- 使用与STDOUT或STDERR相同的方法，将STDIN从键盘重定向到情况其他位置，exec命令允许你将STDIN重定向到Linux系统上的文件中。如：exec 0< testfile。这个命令会告诉shell它应该从文件testfile中获得输入，而不是STDIN。如下例所示：这是在脚本中从待处理的文件中读取数据的绝好方法，Linux系统管理员的一项日常任务就是从日志文件中读取数据并处理。
+    ```
+    #!/bin/bash
+
+    exec 0< input-file
+
+
+    count=1
+
+    while read line
+    do
+    echo "Line #$count: $line"
+    count=$[ $count + 1 ]
+    done
+
+    # 结果
+    [njust@njust tutorials]$ ./foo4.sh 
+    Line #1: This is the first line.
+    Line #2: This is the second line.
+    Line #3: This is the third line.
+    ```
+#### 4.创建自己的重定向
