@@ -99,6 +99,7 @@
     -rwxrw-r--. 1 njust njust 114 4月   4 21:37 test
     ```
 - 通过上例可以看出，当使用\&>符时，命令生成的所有输出都会发送到同一个位置，包括数据和错误。注意：其中一条错误消息出现的位置，**为了避免错误信息散落在输出文件中，相对于标准输出，bash shell自动赋予了错误消息更高的优先级，这样就能集中的浏览错误消息了**。
+
 #### 2.在脚本中重定向输出
 - 可以在脚本中使用STDOUT和STDERR文件描述符在多个位置生成输出，只要简单地重定向相应的文件描述符即可。有两种方法在脚本中重定向输出：
     - 临时重定向行输出
@@ -314,3 +315,163 @@
     [njust@njust tutorials]$ cat test8file
     This'll be bad.
     ```
+#### 5.列出打开的文件描述符
+- 虽然能用到的文件描述符只有9个，但是要记住哪个文件描述符被重定向到哪里很难。为了弄清楚，bash shell提供了lsof命令。lsof命令会列出整个Linux系统打开的所有文件描述符。在很多Linux系统中，lsof命令位于/usr/sbin目录下，以普通用户来运行时，必须通过全路径来引用。/usr/sbin/lsof它会显示当前Linux系统上打开的每个文件的有关信息。
+- 有大量的命令行选项和参数可以用来帮助过滤lsof命令的输出。最常用的是-d和-p，-d允许指定要显示的文件描述符的编号，-p允许指定进程ID。要想知道进程的当前PID，可以用特殊环境变量\$\$。-a选项用来对其他两个选项的结果执行AND运算。lsof命令的默认输出中有7列信息，如下表所示：
+    ```
+    COMMAND                           正在运行的命令名的前9个字符
+    PID                               进程的PID
+    USER                              进程属主的登录名
+    FD                                文件描述符号及访问类型
+    TYPE                              文件的类型(CHR代表字符类型、BLK代表块型、DIR代表目录、REG代表常规文件)
+    DEVICE                            设备的设备号(主设备和从设备)
+    SIZE                              可选参数，表示文件的大小
+    NODE                              本地文件的节点号
+    NAME                              文件名
+    ```
+- 在打开多个替代性文本描述符的脚本中使用lsof命令，情况如下所示：
+    ```
+    #!/bin/bash
+
+    exec 3> testfile_4
+    exec 6> testfile_5
+    exec 7< testfile
+
+    /usr/sbin/lsof -a -p $$ -d0,1,2,3,6,7
+
+    # 结果
+    [njust@njust tutorials]$ ./foo10.sh 
+    COMMAND   PID  USER   FD   TYPE DEVICE SIZE/OFF     NODE NAME
+    foo10.sh 3821 njust    0u   CHR  136,0      0t0        3 /dev/pts/0
+    foo10.sh 3821 njust    1u   CHR  136,0      0t0        3 /dev/pts/0
+    foo10.sh 3821 njust    2u   CHR  136,0      0t0        3 /dev/pts/0
+    foo10.sh 3821 njust    3w   REG  253,0        0 17004830 /home/njust/tutorials/testfile_4
+    foo10.sh 3821 njust    6w   REG  253,0        0 17004842 /home/njust/tutorials/testfile_5
+    foo10.sh 3821 njust    7r   REG  253,0       12 17005330 /home/njust/tutorials/testfile
+    ```
+#### 6.阻止命令输出
+- 有时候不想显示脚本的输出，在将脚本作为后台进程运行时常见。如果运行在后台的脚本出现错误消息时，shell会通过电子邮件将它们发给进程的属主。但是，这十分麻烦。要解决这个问题，可以将STDERR重定向到一个叫作null文件的特殊文件。
+- null文件里什么都没有，shell输出到null文件的任何数据都不会保存，全部都被丢失掉。Linux系统上null文件的标准位置是/dev/null，重定向到该位置的任何数据都会被丢失，不会显示。如下所示：
+    ```
+    [njust@njust tutorials]$ ls -al > /dev/null
+    [njust@njust tutorials]$ cat /dev/null
+    ```
+- 避免出现错误消息，也无需保存它们的一个常用方法，如下所示：
+    ```
+    [njust@njust tutorials]$ ls -al curry-file testfile 2> /dev/null
+    -rw-rw-r--. 1 njust njust 12 3月  17 14:42 testfile
+    ```
+- 也可以在输入重定向中将/dev/null作为输入文件，由于/dev/null文件中不含有任何内容，通常用它来快速清除现有文件中的数据，而不用先删除文件再重新创建。**这是清除日志文件的一个常用方法，因为日志文件必须时刻准备等待应用程序操作**。如下所示：
+    ```
+    [njust@njust tutorials]$ cat testfile
+    Curry
+    curry
+    [njust@njust tutorials]$ cat /dev/null > testfile
+    [njust@njust tutorials]$ cat testfile
+    ```
+#### 7.创建临时文件
+- Linux使用/tmp目录来存放不需要永久保留的文件，大多数Linux发行版配置了系统在启动时自动删除/tmp目录的所有文件。系统上的任何用户都有权限在读写/tmp目录中的文件。mktemp命令可以在/tmp目录中创建一个唯一的临时文件。shell会创建这个文件，但不用默认的umask值。它会将文件的读写权限分配给文件的拥有者，并将你设置成文件的所有者。一旦创建了这个文件，你就在脚本中有了完整的读写权限，其他人没法访问它了(root用户除外)。
+##### 7.1 创建本地临时文件
+- 默认情况下，mktemp命令会在本地目录中创建一个文件，要用mktemp命令在本地目录中创建一个临时文件，只要指定一个文件名模板就行。模板可以包括任意文本文件名，在文件名末尾加上6个大写的X即可，mktemp命令会用6个字符替换6个X，从而保证文件名在目录中是唯一的。如下所示：
+    ```
+    [njust@njust tutorials]$ mktemp testing.XXXXXX
+    testing.PFEqZP
+    [njust@njust tutorials]$ ls -al testing*
+    -rw-------. 1 njust njust 0 4月  14 22:06 testing.PFEqZP
+    ```
+##### 7.2 在/tmp目录中创建临时文件
+- -t选项会强制mktemp命令在系统的临时目录来创建该文件，mktemp命令会返回用来创建临时文件的全路径，而不仅仅是文件名。如下所示：
+    ```
+    [njust@njust tutorials]$ mktemp -t test.XXXXXX
+    /tmp/test.qCLPxp
+    [njust@njust tutorials]$ ls -al /tmp/test*
+    -rw-------. 1 njust njust 0 4月  14 22:12 /tmp/test.qCLPxp
+    -rw-------. 1 njust njust 0 4月  14 22:12 /tmp/test.ZslvVI
+    ```
+##### 7.3 创建临时目录
+- -d选项告诉mktemp命令来创建一个临时目录而不是一个临时文件，如下例所示：
+    ```
+    #!/bin/bash
+
+    tempdir=$(mktemp -d dir.XXXXXX)
+    cd $tempdir
+
+    tempfile1=$(mktemp temp.XXXXXX)
+    tempfile2=$(mktemp temp.XXXXXX)
+
+    exec 7> $tempfile1
+    exec 8> $tempfile2
+
+    echo "Sending data to directory $tempdir."
+    echo "This is a test line of data for $tempfile1" >&7
+    echo "This is a test line of data for $tempfile2" >&8
+
+    # 结果
+    [njust@njust tutorials]$ ./foo11.sh
+    Sending data to directory dir.TCOt7K.
+    [njust@njust tutorials]$ cd dir.TCOt7K/
+    [njust@njust dir.TCOt7K]$ ls -al
+    总用量 16
+    drwx------. 2 njust njust   44 4月  14 22:35 .
+    drwxrwxr-x. 5 njust njust 4096 4月  14 22:35 ..
+    -rw-------. 1 njust njust   44 4月  14 22:35 temp.5YibyX
+    -rw-------. 1 njust njust   44 4月  14 22:35 temp.6tHZMW
+    ```
+#### 8.记录消息
+- 将输出同时发送到显示器和日志文件，这种做法你不需要将输出重定向两次，只要用特殊的tee命令即可。tee命令相当于管道的一个T型转头。它将从STDIN过来的数据同时发往两处。一处是STDOUT，另一处是tee命令行所指定的文件名，tee命令格式：tee 文件名。
+- 由于tee命令会重定向来自STDIN的数据，可以用它配合管道命令来重定向命令输出，如下所示：
+    ```
+    [njust@njust tutorials]$ date | tee teefile
+    2020年 04月 14日 星期二 22:43:45 CST
+    [njust@njust tutorials]$ cat teefile 
+    2020年 04月 14日 星期二 22:43:45 CST
+    ```
+- 注意：**tee命令默认情况下，会在每次使用时覆盖输出文件的内容**。如下所示：
+    ```
+    [njust@njust tutorials]$ who | tee teefile 
+    njust    :0           2020-04-14 21:17 (:0)
+    njust    pts/0        2020-04-14 21:19 (:0)
+    [njust@njust tutorials]$ cat teefile 
+    njust    :0           2020-04-14 21:17 (:0)
+    njust    pts/0        2020-04-14 21:19 (:0)
+    ```
+- 如果想将数据追加到文件中，必须用-a选项，如下所示：
+    ```
+    [njust@njust tutorials]$ date | tee -a teefile 
+    2020年 04月 14日 星期二 22:46:14 CST
+    [njust@njust tutorials]$ cat teefile 
+    njust    :0           2020-04-14 21:17 (:0)
+    njust    pts/0        2020-04-14 21:19 (:0)
+    2020年 04月 14日 星期二 22:46:14 CST
+    ```
+#### 9.实例
+- 文件重定向常用于脚本需要读入文件和输出文件时，下例中脚本做了两件事情。首先读取.csv文件的数据，再输出SQL INSERT语句来将数据插入到数据库中。如下例所示：
+    ```
+    #!/bin/bash
+
+    outfile="members.sql"
+    IFS=','
+
+
+    while read lname fname address city state zip
+    do
+    cat >> $outfile << EOF
+    INSERT INTO members (lname,fname,address,city,state,zip) VALUES
+    ('$lname','$fname','$address','$city','$state','$zip');
+    EOF
+    done < ${1}
+
+    # 结果
+    [njust@njust tutorials]$ ./foo12.sh members.csv 
+    [njust@njust tutorials]$ cat members.sql 
+    INSERT INTO members (lname,fname,address,city,state,zip) VALUES
+    ('Blum','Curry','123 Main St.','Chicago','IL','60601');
+    INSERT INTO members (lname,fname,address,city,state,zip) VALUES
+    ('Blum','Harden','123 Main St.','Chicago','IL','60601');
+    INSERT INTO members (lname,fname,address,city,state,zip) VALUES
+    ('Bresnahan','Barbara','456 Oak Ave.','Columbus','OH','43201');
+    INSERT INTO members (lname,fname,address,city,state,zip) VALUES
+    ('Bresnahan','Timothy','456 Oak Ave.','Columbus','OH','43201');
+    ```
+#### 10.资料下载
+- [笔记，欢迎star,follow,fork......](https://github.com/cdlwhm1217096231/Linux/tree/master/Shell%E8%84%9A%E6%9C%AC%E7%BC%96%E7%A8%8B)
