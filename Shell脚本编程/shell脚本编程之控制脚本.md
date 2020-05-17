@@ -119,4 +119,335 @@
     ```
 - 上述示例程序中，当脚本运行到正常的退出位置时，捕获就被触发，shell会执行trap命令。如果提前退出脚本，同样能捕获到EXIT信号。
 ##### 2.5 修改或移除捕获
-- 要想在脚本中的不同位置进行不同的捕获处理，只需要重新使用带有新选项的trap命令。如下例所示：
+- 如果一个信号在捕获被修改前接收到的，那么脚本仍然会根据最初的trap命令进行处理。如下例所示：
+    ```
+    #!/bin/bash
+
+    trap "echo ' Sorry... Ctrl-C is trapped.'" SIGINT
+
+    count=1
+    while [ $count -le 5 ]
+    do 
+        echo "Loop #$count"
+        sleep 1
+        count=$[ $count + 1 ]
+    done
+
+    trap "echo ' I modified the trap!'" SIGINT  # 此处捕捉被修改！
+
+    count=1
+    while [ $count -le 5 ]
+    do
+        echo "Second Loop #$count"
+        sleep 1
+        count=$[ $count + 1 ]
+    done
+
+    # 结果
+    [njust@njust tutorials]$ ./control3.sh 
+    Loop #1
+    Loop #2
+    Loop #3
+    Loop #4
+    ^C Sorry... Ctrl-C is trapped.
+    Loop #5
+    Second Loop #1
+    Second Loop #2
+    Second Loop #3
+    ^C I modified the trap!
+    ```
+- 可以删除已经设置好的捕获：**只要在trap命令与希望恢复默认行为的信号列表之间加上两个破折号即可**，但如果信号是在捕获被移除前接收到的，那么脚本会按照原先trap命令中的设置进行处理，如下例所示：
+    ```
+    #!/bin/bash
+
+    trap "echo ' Sorry... Ctrl-C is trapped.'" SIGINT
+
+    count=1
+    while [ $count -le 5 ]
+    do
+        echo "Loop #$count"
+        sleep 1
+        count=$[ $count + 1 ]
+    done
+
+    trap -- SIGINT   # 此处已经删除已经设置好的捕获，因此最前面设置的捕获SIGINT信号将会失效！
+    echo "I just removed the trap"
+
+    count=1
+    while [ $count -le 5 ]
+    do
+        echo "Second Loop #$count"
+        sleep 1
+        count=$[ $count + 1 ]
+    done
+
+    # 结果
+    [njust@njust tutorials]$ ./control4.sh 
+    Loop #1
+    Loop #2
+    Loop #3
+    ^C Sorry... Ctrl-C is trapped.
+    Loop #4
+    Loop #5
+    I just removed the trap
+    Second Loop #1
+    Second Loop #2
+    ^C
+    ```
+#### 3.以后台模式运行脚本
+- 一些脚本可能要执行很长时间，而我们又不希望在命令行界面一直等待脚本执行结束。于是，可以采用后台运行的模式。**在后台模式中，进行运行时不会和终端会话上的STDIN、STDOUT、STDERR关联**。
+##### 3.1 后台运行脚本
+- **以后台模式运行脚本只需要在命令后加一个&即可**。如下例所示：
+    ```
+    #!/bin/bash
+
+    count=1
+    while [ $count -le 10 ]
+    do
+        sleep 1
+        count=$[ $count + 1 ]
+    done
+
+    # 以后台模式运行脚本！！！
+    [njust@njust tutorials]$ ./bg1.sh &
+    [1] 4280
+    ```
+- 当&符号放到命令后时，它会将命令和bash shell分离开，将命令作为系统中的一个独立的后台进行运行，**结果中显示的第一行解释**：
+    - \[1\]：shell分配给后台进程的作业号；
+    - 4280：Linux系统分配给进程的进程ID（PID），**Linux系统上运行的每个进程都必须有一个唯一的PID**；
+- **当后台进程结束时，它会在终端上显示出下面的一条信息**，该消息表示作业的作业号及作业状态Done，还有用于启动作用的命令。
+    ```
+    [1]+  完成                  ./bg1.sh
+    ```
+- 注意：**当后台进程运行时，它仍然会使用终端显示器来显示STDOUT和STDERR消息**，如下例所示：
+    ```
+    #!/bin/bash
+
+    echo "Start the test script"
+    count=1
+    while [ $count -le 5 ]
+    do
+        echo "Loop #$count"
+        sleep 2 
+        count=$[ $count + 1 ]
+    done
+
+    echo "Test script is complete"
+
+    # 结果
+    [njust@njust tutorials]$ ./bg2.sh &
+    [1] 4712
+    Start the test script
+    Loop #1
+    Loop #2
+    Loop #3
+    Loop #4
+    Loop #5
+    Test script is complete
+    [1]+  完成                  ./bg2.sh
+    ```
+##### 3.2 运行多个后台作业
+- 可以在命令行中同时启动多个后台作业，每次启动新作业时，Linux系统都会为其分配一个新的作业号和PID。通过ps命令，可以看出所有脚本的状态。如下例所示：
+    ```
+    [njust@njust tutorials]$ ./bg2.sh &  ./bg3.sh & ./bg4.sh & ps
+    [1] 5495
+    [2] 5496
+    [3] 5497
+    Start the test script #4
+    Loop #1
+    Start the test script #2
+    Loop #1
+    Start the test script #3
+    Loop #1
+    PID TTY          TIME CMD
+    5306 pts/0    00:00:00 bash
+    5495 pts/0    00:00:00 bg2.sh
+    5496 pts/0    00:00:00 bg3.sh
+    5497 pts/0    00:00:00 bg4.sh
+    5498 pts/0    00:00:00 ps
+    5499 pts/0    00:00:00 sleep
+    5500 pts/0    00:00:00 sleep
+    5501 pts/0    00:00:00 sleep
+    ```
+- 在ps命令的输出中，每一个后台进程都和终端会话联系在一起。如果终端会话退出，那么后台进程也会随之退出。**如果希望运行在后台模式的脚本在登出控制台后能够继续运行，需要借助别的手段**。
+#### 4.在非控制台下运行脚本
+- **有时候，你会想在终端会话中启动shell脚本，然后让脚本一直以后台模式运行到结束，即使你已经退出了终端。可以使用nohup命令来实现**。nohup命令运行了另外一个命令来阻断所有发送给该进程的SIGHUP信号。这会在退出终端会话时，阻止进程退出。如下例所示：
+    ```
+    [njust@njust tutorials]$ nohup ./bg2.sh &
+    [1] 5745
+    nohup: 忽略输入并把输出追加到"nohup.out"
+    ```
+- 当使用nohup命令时，如果关闭该会话，脚本会忽略终端会话发送过来的SIGHUP信号。由于nohup命令会解除终端与进程的关联，进程也就不再同STDOUT和STDERR联系在一起。为了保存该命令产生的输出，nohup命令会自动将STDOUT和STDERR的消息重定向到一个名为nohup.out的文件中。nohup.out文件包含了通常会发送到终端显示器上的所有输出。如下所示：
+    ```
+    [njust@njust tutorials]$ cat nohup.out 
+    Start the test script #2
+    Loop #1
+    Loop #2
+    Loop #3
+    Loop #4
+    Loop #5
+    Loop #6
+    Loop #7
+    Loop #8
+    Loop #9
+    Loop #10
+    Test script is complete
+    ```
+#### 5.作业控制
+- 作业控制：**启动、停止、终止及恢复作业的功能**。通过作业控制，就能完全控制shell环境中所有进程的运行方式了。
+##### 5.1 查看作业
+- 作业控制中的关键命令是jobs命令，**jobs命令允许查看shell当前正在处理的作业**。如下例所示：
+    ```
+    #!/bin/bash
+
+    echo "Script process ID: $$"
+
+    count=1
+    while [ $count -le 10 ]
+    do
+        echo "Loop #$count"
+        sleep 10
+        count=$[ $count + 1 ]
+    done
+
+    echo "End of script ..."
+
+    # 结果
+    [njust@njust tutorials]$ ./work1.sh 
+    Script process ID: 6157
+    Loop #1
+    Loop #2
+    ^Z
+    [1]+  已停止               ./work1.sh
+    ```
+- \$\$变量：**显示Linux系统分配给该脚本的PID**。可以从命令行启动该脚本，使用Ctrl-Z键来暂停脚本。利用\&将另一个作业作为后台进程启动，然后将脚本的结果重定向到文件中。如下所示：
+    ```
+    [njust@njust tutorials]$ ./work1.sh > work1.out &
+    [2] 6264
+    ```
+- **jobs命令可以查看分配给shell的作业**，jobs命令会显示上面两个已停止/运行中的作业，以及它们的作业号和作业中使用的命令。如下所示：
+    ```
+    [njust@njust tutorials]$ jobs
+    [1]+  已停止               ./work1.sh
+    [2]-  运行中               ./work1.sh > work1.out &
+    ```
+- **要想查看作业的PID，可以在jobs命令中加入-l选项**。如下所示：
+    ```
+    [njust@njust tutorials]$ jobs -l
+    [1]+  6157 停止                  ./work1.sh
+    [2]-  6264 运行中               ./work1.sh > work1.out &
+    ```
+- **jobs命令参数如下所示**：
+    ```
+    参数                    描述
+    -l                 列出进程的PID和作业号
+    -n                 只列出上次shell发出的通知后改变的作业
+    -p                 只列出作业的PID
+    -r                 只列出运行中的作业
+    -s                 只列出已停止的作业
+    ```
+- **jobs命令输出中的加号和减号，带加号的作业会被当做默认作业**。在使用作业控制命令时，如果未在命令行中指定任何作业号，该作业会被当成作业控制命令的操作对象。**当前的默认作业完成处理后，带减号的作业成为下一个默认作业。任何时候都只有一个带加号的作业和一个带减号的作业，不管shell中有多少个正在运行的作业**。下例表示了下一个作业在默认作业移除时是如何成为默认作业的。如下例所示：
+    ```
+    [njust@njust tutorials]$ ./work1.sh > work1.out &
+    [1] 6721
+    [njust@njust tutorials]$ ./work1.sh > work2.out &
+    [2] 6729
+    [njust@njust tutorials]$ ./work1.sh > work3.out &
+    [3] 6738
+
+    [njust@njust tutorials]$ jobs -l
+    [1]   6721 运行中               ./work1.sh > work1.out &
+    [2]-  6729 运行中               ./work1.sh > work2.out &
+    [3]+  6738 运行中               ./work1.sh > work3.out &
+
+    [njust@njust tutorials]$ kill 6738
+    [3]+  已终止               ./work1.sh > work3.out
+    [njust@njust tutorials]$ jobs -l
+    [1]-  6721 运行中               ./work1.sh > work1.out &
+    [2]+  6729 运行中               ./work1.sh > work2.out &
+
+    [njust@njust tutorials]$ kill 6729
+    [2]+  已终止               ./work1.sh > work2.out
+    [njust@njust tutorials]$ jobs -l
+    [1]+  6721 运行中               ./work1.sh > work1.out &
+
+    [njust@njust tutorials]$ kill 6721
+    [1]+  已终止               ./work1.sh > work1.out
+    ```
+##### 5.2 重启停止的作业
+- **在bash作业控制中，可以将已停止的作业作为后台进程或前台进程重启。前台进程会接管你当前工作的终端，所以在使用该功能时要小心**。要以后台模式重启一个作业，可以使用bg命令加上作业号。如下例所示：
+    ```
+    [njust@njust tutorials]$ ./work1.sh 
+    Script process ID: 6956
+    Loop #1
+    ^Z
+    [1]+  已停止               ./work1.sh
+    [njust@njust tutorials]$ bg
+    [1]+ ./work1.sh &
+    [njust@njust tutorials]$ jobs
+    [1]+  运行中               ./work1.sh &
+    ```
+- 注意：**当作业被转入后台模式时，并不会列出其PID。如果有多个作业，需要在bg命令后加上作业号**。如下所示：
+    ```
+    [njust@njust tutorials]$ ./work1.sh 
+    Script process ID: 7299
+    Loop #1
+    ^Z
+    [1]+  已停止               ./work1.sh
+
+    [njust@njust tutorials]$ ./work2.sh 
+    Script process ID: 7307
+    Loop #1
+    ^Z
+    [2]+  已停止               ./work2.sh
+
+    [njust@njust tutorials]$ ./work3.sh 
+    Script process ID: 7315
+    Loop #1
+    ^Z
+    [3]+  已停止               ./work3.sh
+
+    [njust@njust tutorials]$ bg 2   # bg 2用于将第二个作业置于后台模式！！！
+    [2]- ./work2.sh &
+    Loop #2
+    
+    [njust@njust tutorials]$ jobs
+    [1]-  已停止               ./work1.sh
+    [2]   运行中               ./work2.sh &
+    [3]+  已停止               ./work3.sh
+    ```
+- 注意：**当使用jobs命令时，它列出了作业及其状态，即使是默认作业当前并没有处于后台模式**。要以前台模式重启已暂停作业，可使用带有作用号的fg命令。由于作业是以前台模式运行的，直到该作业完成后，命令行界面才会出现提示符。如下所示：
+    ```
+    [njust@njust tutorials]$ ./work1.sh 
+    Script process ID: 7451
+    Loop #1
+    ^Z  
+    [2]+  已停止               ./work1.sh
+
+    [njust@njust tutorials]$ ./work2.sh 
+    Script process ID: 7459
+    Loop #1
+    ^Z
+    [3]+  已停止               ./work2.sh
+
+    [njust@njust tutorials]$ ./work3.sh 
+    Script process ID: 7467
+    Loop #1
+    ^Z
+    [4]+  已停止               ./work3.sh
+
+    [njust@njust tutorials]$ fg 2
+    ./work1.sh
+    Loop #2
+    Loop #3
+    Loop #4
+    Loop #5
+    Loop #6
+    Loop #7
+    Loop #8
+    Loop #9
+    Loop #10
+    End of script ...
+    [njust@njust tutorials]$ 
+    ```
+#### 6.调整谦让度
