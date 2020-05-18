@@ -451,3 +451,232 @@
     [njust@njust tutorials]$ 
     ```
 #### 6.调整谦让度
+- 在多任务操作系统中，内核负责将CPU时间分配给系统上运行的每个进程。**调度优先级**是内核分配给进程的CPU时间。在Linux系统中，由shell启动的所有进程的调度优先级默认都是相同的。
+- 调度优先级是一个整数值，从-20(最高优先级)~+19(最低优先级)。**默认情况下，bash shell以优先级0来启动所有进程**。越低的值即优先级越高，获得CPU时间的机会就越高。
+##### 6.1 nice命令
+- nice命令允许你设置命令启动时的调度优先级，要让命令以更低的优先级允许，只要用nice -n命令来指定新的优先级级别。如下例所示：
+    ```
+    [njust@njust tutorials]$ nice -n 10 ./work1.sh > work1.out &
+    [1] 3484
+    [njust@njust tutorials]$ ps -p 3484 -o pid,ppid,ni,cmd
+    PID   PPID  NI CMD
+    3484   2985  10 /bin/bash ./work1.sh
+    ```
+- 注意：**必须将nice命令和要启动的命令放在同一行中**。上例中，ps命令的输出验证了谦让度值(NI列)已经被调整为10。
+- 但是，如果想要提高某个命令的优先级，**nice命令会阻止普通用户来提高命令的优先级**。因为nice命令的-n选项并不是必须的，只需要在破折号后面跟上优先级即可。如下例所示：
+    ```
+    # 提升优先级失败的情况
+    [njust@njust tutorials]$ nice -n -10 ./work1.sh > work1.out &
+    [1] 3570
+    [njust@njust tutorials]$ nice: 无法设置优先级: 权限不够
+    ^C
+    # 提升优先级成功的情况
+    [njust@njust tutorials]$ nice -10 ./work1.sh > work1.out &
+    [1] 3760
+    [njust@njust tutorials]$ ps -p 3760 -o pid,ppid,ni,cmd
+    PID   PPID  NI CMD
+    3760   2985  10 /bin/bash ./work1.sh
+    ```
+##### 6.2 renice命令
+- 有时候需要改变系统上已运行命令的优先级，通过renice命令即可实现。**它允许你指定运行进程的PID来改变它的优先级**。如下例所示：
+    ```
+    [root@njust tutorials]# ./work1.sh &
+    [1] 4612
+    Script process ID: 4612
+    [root@njust tutorials]# ps -p 4612 -o pid,ppid,ni,cmd
+    PID   PPID  NI CMD
+    4612   4263   0 /bin/bash ./work1.sh
+    [root@njust tutorials]# renice -n 10 -p 4612
+    4612 (进程 ID) 旧优先级为 0，新优先级为 10
+    [root@njust tutorials]# ps -p 4612 -o pid,ppid,ni,cmd
+    PID   PPID  NI CMD
+    4612   4263  10 /bin/bash ./work1.sh
+    ```
+- renice命令会自动更新**当前运行**进程的调度优先级，必须以root账户登录后才能使用！renice也有一些限制：
+    - 只能对属于你的进程执行renice；
+    - 只能通过renice降低进程的优先级；
+    - root用户可以通过renice来任意调整进程的优先级；
+#### 7.定时任务
+- 有时候，我们需要在某个预先设定的时间开始运行脚本，Linux系统提供了多个在预选时间运行脚本的方法：**at命令和cron表**。
+##### 7.1 用at命令来计划执行作业
+- at命令允许指定Linux系统何时运行脚本，at命令会将作业提交到队列中，指定shell何时运行该作业。at的守护进程atd会以后台模式运行，检查作业队列来运行作业。atd守护进程会检查系统上的一个特殊目录/var/spool/at来获取用at命令提交的作业。**默认情况下，atd守护进程会每60s检查一下该目录**。
+- **1.at命令的格式**
+    ```
+    at [-f filename] time
+    ```
+- 默认情况下，at命令会将STDIN的输入放到队列中。**可以使用-f选项来指定用于读取命令(脚本文件)的文件名。time参数指定了Linux系统何时运行该作业。如果你指定的时间已经错过，at命令会在第二天的那个时刻运行指定的作业**。
+- 如何指定时间？at命令能够识别多种不同的时间格式。如下所示：
+    - 标准的小时和分钟格式，如21:00；
+    - AM/PM指示符，如21:00 PM；
+    - 特定可命令时间，如now noon midnight等；
+    - 标准日期格式，如MMDDYY MM/DD/YY DD.MM.YY
+    - 文本日期，如Jul 4或Dec 25；
+    - 指定时间增量：
+        - 当前时间+25 min；
+        - 明天10:15 PM；
+        - 10：15+7天；
+- 在使用at命令时，该作业会被提交到作业队列中。作业队列会保存通过at命令提交的待处理的作业。针对不同的优先级，存在26种不同的作业队列，作业队列通过用小写字母a~z和大写字母A~Z来表示。**作业队列的字母排序越高，作业运行的优先级就越低(更高的nice值)**。默认情况下，at的作业会被提交到a作业队列。如果想以更高的优先级运行作业，可以用-q参数指定不同的队列字母。
+- **2.获取作业的输出**
+- 当作业在Linux系统上运行时，显示器并不会关联到该作业。取而代之的是，Linux系统会将提交该作业的用户的电子邮箱地址作为STDOUT和STDERR。任何发到STDOUT或STDERR的输出都会通过邮件发送给该用户。如下例所示：
+    ```
+    #!/bin/bash
+
+    echo "This script run at $(date +%B%d,%T)"
+    sleep 5
+    echo "This is the script's end"
+
+    # 结果
+    [njust@njust tutorials]$ at -f at.sh now
+    job 1 at Mon May 18 21:15:00 2020
+    您在 /var/spool/mail/njust 中有新邮件
+    ```
+- 使用e-mail作为at命令的输出很不方便，因此在使用at命令时，最好在脚本中对STDOUT和STDERR进行重定向。**如果不想在at命令中使用邮件或重定向，最好加上-M选项来屏蔽作业产生的输出信息**。如下所示：
+    ```
+    #!/bin/bash
+
+    echo "This script run at $(date +%B%d,%T)" > at1.out
+    echo >> at1.out
+    sleep 3
+    echo "This is the script's end" >> at1.out
+
+    # 结果
+    [njust@njust tutorials]$ at -M -f at1.sh now
+    job 4 at Mon May 18 21:20:00 2020
+    [njust@njust tutorials]$ cat at1.out 
+    This script run at 五月18,21:20:29
+
+    This is the script's end
+    [njust@njust tutorials]$ cat at1.sh 
+    ```
+- **3.列出等待的作业**
+- atq命令可以查看系统中有哪些作业在等待。如下所示：
+    ```
+    [njust@njust tutorials]$ at -M -f at1.sh teatime
+    job 5 at Tue May 19 16:00:00 2020
+    [njust@njust tutorials]$ at -M -f at1.sh tomorrow
+    job 6 at Tue May 19 21:23:00 2020
+    [njust@njust tutorials]$ at -M -f at1.sh 23:00
+    job 7 at Mon May 18 23:00:00 2020
+    [njust@njust tutorials]$ at -M -f at1.sh now
+    job 8 at Mon May 18 21:24:00 2020
+
+    [njust@njust tutorials]$ atq
+    5	Tue May 19 16:00:00 2020 a njust
+    6	Tue May 19 21:23:00 2020 a njust
+    7	Mon May 18 23:00:00 2020 a njust
+    ```
+- **4.删除作业**
+- 一旦知道哪些作业在作业队列中等待，就能使用atrm命令来删除等待中的命令。如下所示：
+    ```
+    [njust@njust tutorials]$ atq
+    5	Tue May 19 16:00:00 2020 a njust
+    6	Tue May 19 21:23:00 2020 a njust
+    7	Mon May 18 23:00:00 2020 a njust
+    [njust@njust tutorials]$ atrm 5
+    [njust@njust tutorials]$ atq
+    6	Tue May 19 21:23:00 2020 a njust
+    7	Mon May 18 23:00:00 2020 a njust
+    ```
+##### 7.2 安排需要定期执行的脚本
+- 使用at命令预设时间安排脚本执行很方便，但是如果想每天的同一时间都执行该脚本，就不再使用at命令不断提交作业了。**Linux系统使用cron程序来安排要定期执行的作业**。cron程序会在后台运行并检查一个特殊的表(cron时间表)，以获得已安排执行的作业。
+- **1.cron时间表**：cron时间表采用一种特别的格式来指定作业何时运行，格式如下所示：
+    ```
+    min hour day month week 具体的命令
+    ```
+- **cron时间表允许你使用特定值、取值范围(如1~5)或者通配符(\*)来指定条目**。如下所示：
+    ```
+    15 10 * * * command  # 每天的10：15执行一次命令
+    ```
+- 可以用三字符的文本值(mon、tue、wed、thu、fri、sat、sun)或数值(0为周日，6为周六)来指定week的值。如何设置一个在每个月的最后一天执行的命令？常用的方法是**加一条使用date命令的if-then语句来检查明天的日期是否为01**。如下所示：
+    ```
+    00 12 * * * if [ `date +%d -d tomorrow` = 01 ]; then ; command
+    ```
+- 具体的命令中**必须指定要运行的命令或脚本的全路径名**，如下例所示：
+    ```
+    15 10 * * * /home/njust/tutotials/test.sh > test.out
+    ```
+- **2.构建cron时间表**
+- 每个系统用户都可以用自己的cron时间表来运行安排好的任务，**Linux提供了crontab命令来处理cron时间表**。要列出已有的cron时间表，可以用-l选项。如下所示：
+    ```
+    [njust@njust tutorials]$ crontab -l
+    no crontab for njust
+    ```
+- **默认情况下，用户cron时间表文件并不存在**。要为cron时间表添加条目，可以用-e选项。在添加条目时，crontab命令会启动一个文本编辑器，使用已有的cron时间表作为文件内容。
+- **3.浏览cron目录**
+- 如果你创建的脚本对精确的执行时间要求不高，用预配置的cron脚本目录会更方便。有4个基本目录：hourly、daily、monthly、weekly。如果脚本需要每天执行一次，只要将脚本复制到daily目录，cron就会每天执行它。如下所示：
+    ```
+    [njust@njust ~]$ ls /etc/cron.*ly
+    /etc/cron.daily:
+    logrotate  man-db.cron  mlocate
+
+    /etc/cron.hourly:
+    0anacron  mcelog.cron
+
+    /etc/cron.monthly:
+
+    /etc/cron.weekly:
+    ```
+**4.anacron程序**
+- cron程序的唯一问题是：它假设Linux是7\*24小时运行的，除非将Linux系统当成服务器环境来运行，否则假设不会成立。如果某个作业在cron时间表中安排运行的时间已到，但这时Linux系统处于关机状态，那么这个作业就不会执行。当系统开机时，cron程序不会再去运行那些错过的作业。**要解决这个问题，许多Linux发行版包含了anacron程序**。
+- 如果anacron知道某个作业错过了执行时间，它会尽快运行该作业。**这个功能常用于日志维护的脚本**。anacron程序只会处理位于cron目录的程序，如/etc/cron.monthly。它使用时间戳来决定作业是否在正确的计划间隔内运行。每个cron目录都有一个时间戳文件，该文件位于/var/spool/anacron。如下所示：
+    ```
+    [root@njust njust]# cat /var/spool/anacron/cron.monthly
+    20200517
+    ```
+- anacron程序使用自己的时间表(通常位于/etc/anacrontab)来检查作业目录。如下所示：
+    ```
+    [root@njust njust]# cat /etc/anacrontab
+    # /etc/anacrontab: configuration file for anacron
+
+    # See anacron(8) and anacrontab(5) for details.
+
+    SHELL=/bin/sh
+    PATH=/sbin:/bin:/usr/sbin:/usr/bin
+    MAILTO=root
+    # the maximal random delay added to the base delay of the jobs
+    RANDOM_DELAY=45
+    # the jobs will be started during the following hours only
+    START_HOURS_RANGE=3-22
+
+    #period in days   delay in minutes   job-identifier   command
+    1	5	cron.daily		nice run-parts /etc/cron.daily
+    7	25	cron.weekly		nice run-parts /etc/cron.weekly
+    @monthly 45	cron.monthly		nice run-parts /etc/cron.monthly
+    ```
+- anacron时间表的基本格式如下所示：
+    - period：定义了作业多久运行一次，以天为单位。anacron程序用此来检查作业的时间戳文件；
+    - delay：指定系统启动后anacron程序需要等待多少分钟再开始运行错过的脚本；
+    - command：包含了run-parts程序(**负责运行目录中传给它的任何脚本**)和一个cron脚本目录名；
+    - identifier：一种特别的非空字符串，用于唯一标识日志消息和错误邮件中的作业；
+    ```
+    period delay identifier command
+    ```
+- 注意：**anacron程序不会运行位于 /etc/cron.hourly的脚本。因为anacron程序不会处理执行时间需求小于一天的脚本**。
+##### 7.3 使用新shell启动脚本
+- 如果每次运行脚本的时候都能够启动一个新的bash shell，将会非常方便。当用户登录bash shell时需要运行相关的启动文件，基本上不同发行版的Linux系统按照下列顺序所找到的第一个文件会被运行，其余的文件将会被忽略：
+    - \$HOME/.bash_profile
+    - \$HOME/.bash_login
+    - \$HOME/.profile
+- **因此，需要将在登录时运行的脚本放在上面的第一个文件中**。每次启动一个新的shell时，bash shell都会运行.bashrc文件。可以如下例所示进行验证：
+    ```
+    # .bashrc
+
+    # Source global definitions
+    if [ -f /etc/bashrc ]; then
+        . /etc/bashrc
+    fi
+
+    # Uncomment the following line if you don't like systemctl's auto-paging feature:
+    # export SYSTEMD_PAGER=
+
+    # User specific aliases and functions
+
+    echo "I'm in a new shell!"
+
+    # 结果
+    [njust@njust ~]$ bash
+    I'm in a new shell!
+    ```
+- .bashrc文件通常也是通过某个bash启动文件来运行的。**因为.bashrc文件会运行两次**：一次是当你登入bash shell时，另一次是当你启动一个bash shell时。如果你需要一个脚本在两个时刻都得以运行，可以把这个脚本放进该文件中。
+#### 8.资料下载
+- [笔记，欢迎star,follow,fork......](https://github.com/cdlwhm1217096231/Linux/tree/master/Shell%E8%84%9A%E6%9C%AC%E7%BC%96%E7%A8%8B)
